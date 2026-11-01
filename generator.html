@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UNAM 3D AI Studio - Generación de Modelos con Hyper3D Rodin & VXR Core</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #070d18;
+      --bg-panel: #0d1627;
+      --bg-card: #132038;
+      --unam-gold: #e5a712;
+      --unam-gold-glow: rgba(229, 167, 18, 0.35);
+      --unam-blue: #002b7a;
+      --puma-accent: #00d2ff;
+      --puma-glow: rgba(0, 210, 255, 0.3);
+      --text-main: #f0f4fc;
+      --text-muted: #8fa0be;
+      --border: rgba(143, 160, 190, 0.18);
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    header {
+      background: rgba(13, 22, 39, 0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .brand-title {
+      font-family: 'Cinzel', serif;
+      font-size: 1.15rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      color: var(--unam-gold);
+    }
+
+    .brand-sub {
+      font-size: 0.75rem;
+      color: var(--puma-accent);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      font-weight: 600;
+    }
+
+    .header-links {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .nav-btn {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+
+    .nav-btn:hover {
+      background: rgba(255, 255, 255, 0.12);
+      color: var(--text-main);
+      border-color: var(--unam-gold);
+    }
+
+    .auth-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: var(--success);
+    }
+
+    .auth-badge.unauth {
+      background: rgba(239, 68, 68, 0.1);
+      border-color: rgba(239, 68, 68, 0.3);
+      color: var(--danger);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    main {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 420px 1fr;
+      height: calc(100vh - 65px);
+    }
+
+    .sidebar {
+      background: var(--bg-panel);
+      border-right: 1px solid var(--border);
+      padding: 24px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .section-title {
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--unam-gold);
+      font-weight: 700;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    select, textarea, input[type="text"] {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 0.9rem;
+      transition: border-color 0.2s;
+    }
+
+    select:focus, textarea:focus, input[type="text"]:focus {
+      outline: none;
+      border-color: var(--unam-gold);
+      box-shadow: 0 0 0 2px var(--unam-gold-glow);
+    }
+
+    textarea {
+      min-height: 110px;
+      resize: vertical;
+      line-height: 1.4;
+    }
+
+    .presets-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .preset-btn {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      padding: 10px;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      text-align: left;
+      transition: all 0.2s;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .preset-btn:hover {
+      background: rgba(229, 167, 18, 0.1);
+      border-color: var(--unam-gold);
+    }
+
+    .preset-btn strong {
+      color: var(--unam-gold);
+      font-size: 0.82rem;
+    }
+
+    .action-btn {
+      background: linear-gradient(135deg, var(--unam-gold), #b8820a);
+      color: #070d18;
+      border: none;
+      padding: 14px 20px;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 0.95rem;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      box-shadow: 0 4px 18px var(--unam-gold-glow);
+      transition: all 0.2s;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .action-btn:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 24px var(--unam-gold-glow);
+    }
+
+    .action-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      filter: grayscale(0.8);
+    }
+
+    .progress-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px;
+      display: none;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .progress-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    .progress-bar-bg {
+      background: rgba(255, 255, 255, 0.08);
+      height: 8px;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      background: linear-gradient(90deg, var(--unam-gold), var(--puma-accent));
+      height: 100%;
+      width: 0%;
+      transition: width 0.4s ease;
+    }
+
+    .viewport-container {
+      position: relative;
+      background: #000;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+
+    #webgl-canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .viewport-hud {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      pointer-events: none;
+    }
+
+    .hud-card {
+      background: rgba(13, 22, 39, 0.85);
+      backdrop-filter: blur(8px);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 16px;
+      font-size: 0.8rem;
+      pointer-events: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-width: 220px;
+    }
+
+    .hud-card h4 {
+      color: var(--unam-gold);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .metric-item {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .metric-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--puma-accent);
+    }
+
+    .metric-label {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+    }
+
+    .viewport-controls {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 12px;
+      background: rgba(13, 22, 39, 0.88);
+      backdrop-filter: blur(10px);
+      border: 1px solid var(--border);
+      padding: 8px 16px;
+      border-radius: 30px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    }
+
+    .v-ctrl-btn {
+      background: transparent;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--text-main);
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .v-ctrl-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: var(--unam-gold);
+    }
+
+    .v-ctrl-btn.active {
+      background: var(--unam-gold);
+      color: #000;
+      border-color: var(--unam-gold);
+      font-weight: 700;
+    }
+
+    .quest-panel {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      width: 320px;
+      background: rgba(13, 22, 39, 0.9);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    }
+
+    .slider-row {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .slider-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.8rem;
+    }
+
+    input[type="range"] {
+      accent-color: var(--puma-accent);
+      width: 100%;
+    }
+
+    .check-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.8rem;
+    }
+
+    .btn-secondary {
+      background: rgba(0, 210, 255, 0.15);
+      border: 1px solid var(--puma-accent);
+      color: var(--puma-accent);
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: center;
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      background: var(--puma-accent);
+      color: #070d18;
+    }
+
+    .empty-state {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      color: var(--text-muted);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      pointer-events: none;
+    }
+
+    .empty-icon {
+      font-size: 3rem;
+      opacity: 0.4;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <div>
+        <div class="brand-title">UNAM 3D AI STUDIO</div>
+        <div class="brand-sub">Hyper3D Rodin v2 &bull; VXR Core Integration</div>
+      </div>
+    </div>
+    <div class="header-links">
+      <div id="authStatusBadge" class="auth-badge">
+        <span class="status-dot"></span>
+        <span id="authStatusText">Verificando API...</span>
+      </div>
+      <a href="index.html" class="nav-btn">&larr; WebXR Experiencia</a>
+      <a href="operator.html" class="nav-btn">Panel Operador</a>
+    </div>
+  </header>
+
+  <main>
+    <!-- BARRA LATERAL: CONFIGURACIÓN Y GENERACIÓN -->
+    <section class="sidebar">
+      <div>
+        <div class="section-title">Presets Ciudad Universitaria</div>
+        <div class="presets-grid">
+          <button class="preset-btn" data-preset="biblioteca">
+            <strong>Biblioteca Central</strong>
+            <span>Murales de O'Gorman y piedra</span>
+          </button>
+          <button class="preset-btn" data-preset="rectoria">
+            <strong>Torre Rectoría</strong>
+            <span>Prisma y mural Siqueiros</span>
+          </button>
+          <button class="preset-btn" data-preset="banca">
+            <strong>Banca de Cantera</strong>
+            <span>Mobiliario de Las Islas</span>
+          </button>
+          <button class="preset-btn" data-preset="jacaranda">
+            <strong>Árbol Jacaranda</strong>
+            <span>Follaje lila universitario</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="promptInput">Descripción Arquitectónica / Prompt</label>
+        <textarea id="promptInput" placeholder="Describe el edificio o elemento 3D a generar con Rodin..."></textarea>
+      </div>
+
+      <div class="form-group">
+        <label for="tierSelect">Modelo / Tier de Generación</label>
+        <select id="tierSelect">
+          <option value="Gen-2.5-Medium" selected>Gen-2.5-Medium (Máxima fidelidad arquitectónica)</option>
+          <option value="Gen-2.5">Gen-2.5 (Equilibrado)</option>
+          <option value="Gen-2">Gen-2 (Rápido)</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="meshModeSelect">Topología de Malla</label>
+        <select id="meshModeSelect">
+          <option value="Raw" selected>Raw Geometry (Triángulos optimizados)</option>
+          <option value="Quad">Quad Mesh (Topología cuadrilátera)</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="imageInput">Imagen de Referencia Opcional (Image-to-3D)</label>
+        <input type="file" id="imageInput" accept="image/png, image/jpeg, image/webp" style="font-size: 0.8rem;">
+      </div>
+
+      <button id="btnGenerate" class="action-btn">
+        <span>✨ Generar Modelo 3D con IA</span>
+      </button>
+
+      <!-- MONITOR DE PROGRESO -->
+      <div id="progressBox" class="progress-box">
+        <div class="progress-header">
+          <span id="progressStage">Iniciando tarea...</span>
+          <span id="progressPercent">0%</span>
+        </div>
+        <div class="progress-bar-bg">
+          <div id="progressBarFill" class="progress-bar-fill"></div>
+        </div>
+        <div id="progressDetails" style="font-size: 0.75rem; color: var(--text-muted); font-family: 'JetBrains Mono', monospace;">
+          Esperando confirmación de Hyper3D...
+        </div>
+      </div>
+    </section>
+
+    <!-- ÁREA 3D Y METRICAS -->
+    <section class="viewport-container">
+      <div id="webgl-canvas"></div>
+
+      <div id="emptyState" class="empty-state">
+        <div class="empty-icon">🏛️</div>
+        <h3>Visor 3D de Modelos IA</h3>
+        <p>Selecciona un preset o redacta un prompt para generar un modelo con Hyper3D Rodin.</p>
+      </div>
+
+      <!-- HUD DE MÉTRICAS -->
+      <div class="viewport-hud">
+        <div class="hud-card">
+          <h4>Métricas de Geometría</h4>
+          <div class="metrics-grid">
+            <div class="metric-item">
+              <span id="metricTris" class="metric-value">0</span>
+              <span class="metric-label">Triángulos</span>
+            </div>
+            <div class="metric-item">
+              <span id="metricVerts" class="metric-value">0</span>
+              <span class="metric-label">Vértices</span>
+            </div>
+            <div class="metric-item">
+              <span id="metricMeshes" class="metric-value">0</span>
+              <span class="metric-label">Draw Calls</span>
+            </div>
+            <div class="metric-item">
+              <span id="metricSize" class="metric-value">0 x 0 m</span>
+              <span class="metric-label">Dimensiones</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PANEL DE OPTIMIZACIÓN META QUEST -->
+      <div id="questPanel" class="quest-panel" style="display: none;">
+        <h4 style="color: var(--unam-gold); font-size: 0.85rem;">Optimización para Meta Quest 3/3S</h4>
+        
+        <div class="slider-row">
+          <div class="slider-header">
+            <span>Reducción Poligonal:</span>
+            <strong id="reductionRatioVal" style="color: var(--puma-accent);">50%</strong>
+          </div>
+          <input type="range" id="reductionSlider" min="10" max="85" value="50" step="5">
+        </div>
+
+        <div class="check-row">
+          <input type="checkbox" id="checkMergeDrawCalls" checked>
+          <label for="checkMergeDrawCalls">Consolidar sub-meshes (1 draw call/mat)</label>
+        </div>
+
+        <div class="check-row">
+          <input type="checkbox" id="checkDoubleSided" checked>
+          <label for="checkDoubleSided">Materiales doble cara arquitectónicos</label>
+        </div>
+
+        <button id="btnOptimize" class="btn-secondary">
+          ⚡ Ejecutar Optimización WebXR
+        </button>
+
+        <div style="border-top: 1px solid var(--border); padding-top: 10px; display: flex; flex-direction: column; gap: 8px;">
+          <label for="slotSelect" style="font-size: 0.75rem;">Slot en Escenario UNAM:</label>
+          <select id="slotSelect" style="padding: 6px 10px; font-size: 0.8rem;">
+            <option value="biblioteca">Biblioteca Central (-55m Z)</option>
+            <option value="rectoria">Torre de Rectoría (-65m X)</option>
+            <option value="furniture">Mobiliario Andadores (+4m X)</option>
+            <option value="vegetation">Vegetación Las Islas (-15m X)</option>
+            <option value="custom">Inspección Frontal (-12m Z)</option>
+          </select>
+
+          <button id="btnDownloadGLB" class="nav-btn" style="text-align: center; font-weight: 600;">
+            💾 Descargar GLB Optimizado
+          </button>
+        </div>
+      </div>
+
+      <!-- CONTROLES DEL VISOR -->
+      <div class="viewport-controls">
+        <button id="btnToggleWireframe" class="v-ctrl-btn">Wireframe</button>
+        <button id="btnResetCamera" class="v-ctrl-btn">Centrar Vista</button>
+        <button id="btnToggleGrid" class="v-ctrl-btn active">Cuadrícula</button>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="/src/generator.ts"></script>
+</body>
+</html>

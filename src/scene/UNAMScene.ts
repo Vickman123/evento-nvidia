@@ -19,6 +19,7 @@ export class UNAMScene {
 
   private app: XRApp;
   private externalBuildingGroup: THREE.Group | null = null;
+  private aiSlotObjects: Map<string, THREE.Object3D> = new Map();
 
   constructor(app: XRApp) {
     this.app = app;
@@ -78,11 +79,51 @@ export class UNAMScene {
     this.lighting.setCinemaMode(active);
   }
 
+  /**
+   * Reemplaza dinámicamente un elemento arquitectónico o de ambientación por un modelo GLB generado por IA.
+   * Maneja ocultamiento del placeholder procedural y liberación de memoria GPU.
+   */
+  public replaceSlot(slot: string, newObject: THREE.Object3D): void {
+    // Si ya existía un modelo en este slot, liberarlo
+    if (this.aiSlotObjects.has(slot)) {
+      const prev = this.aiSlotObjects.get(slot)!;
+      this.group.remove(prev);
+      this.app.assets.disposeObject(prev);
+      this.aiSlotObjects.delete(slot);
+    }
+
+    // Gestionar visibilidad de los equivalentes procedurales
+    if (slot === 'biblioteca') {
+      const proceduralBiblio = this.architecture.group.getObjectByName('Biblioteca_Central');
+      if (proceduralBiblio) {
+        proceduralBiblio.visible = false;
+        console.info('[UNAMScene] Placeholder procedural de Biblioteca Central ocultado en favor del modelo IA.');
+      }
+    } else if (slot === 'rectoria') {
+      const proceduralRectoria = this.architecture.group.getObjectByName('Torre_Rectoria');
+      if (proceduralRectoria) {
+        proceduralRectoria.visible = false;
+        console.info('[UNAMScene] Placeholder procedural de Torre de Rectoría ocultado en favor del modelo IA.');
+      }
+    }
+
+    newObject.name = `AI_Slot_${slot}`;
+    this.aiSlotObjects.set(slot, newObject);
+    this.group.add(newObject);
+    console.info(`[UNAMScene] Slot "${slot}" actualizado exitosamente en el grafo de escena.`);
+  }
+
   public dispose(): void {
     this.environment.dispose();
     this.architecture.dispose();
     this.vegetation.dispose();
     this.lighting.dispose();
+
+    this.aiSlotObjects.forEach((obj) => {
+      this.group.remove(obj);
+      this.app.assets.disposeObject(obj);
+    });
+    this.aiSlotObjects.clear();
 
     if (this.externalBuildingGroup) {
       this.app.assets.disposeObject(this.externalBuildingGroup);
