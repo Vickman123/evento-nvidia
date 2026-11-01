@@ -1,0 +1,21 @@
+{
+  "name": "unam-pcpuma-immersive",
+  "version": "1.0.0",
+  "private": true,
+  "description": "UNAM Immersive Experience - PC PUMA WebXR for Meta Quest powered by VXR Core",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "gsap": "^3.12.5",
+    "three": "^0.174.0"
+  },
+  "devDependencies": {
+    "@types/three": "^0.174.0",
+    "typescript": "^5.8.2",
+    "vite": "^6.2.0"
+  }
+}
