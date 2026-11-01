@@ -71,6 +71,7 @@ export class UNAMScene {
     }
 
     // Cargar modelos generados por IA si existen en assets/models/ai/
+    // 1. Banca de Cantera y Basalto
     try {
       const benchModel = await this.app.loadModel('assets/models/ai/unam_banca_cantera.glb', {
         autoGround: true,
@@ -82,9 +83,108 @@ export class UNAMScene {
         this.replaceSlot('furniture', benchModel.group);
         console.info('[UNAMScene] Modelo IA unam_banca_cantera cargado exitosamente en slot "furniture".');
       }
-    } catch (e) {
-      // Modelo IA aún no generado o pendiente
-    }
+    } catch (e) {}
+
+    // 2. Biblioteca Central Monumental
+    try {
+      const biblioModel = await this.app.loadModel('assets/models/ai/unam_biblioteca_central.glb', {
+        autoGround: true,
+        autoCenter: true,
+      });
+      if (biblioModel && biblioModel.group) {
+        biblioModel.group.position.set(0, 0, -55);
+        if (biblioModel.metrics.dimensions.height > 0) {
+          const factor = 36 / biblioModel.metrics.dimensions.height;
+          biblioModel.group.scale.set(factor, factor, factor);
+        }
+        this.replaceSlot('biblioteca', biblioModel.group);
+        console.info('[UNAMScene] Modelo IA unam_biblioteca_central montado a escala monumental.');
+      }
+    } catch (e) {}
+
+    // 3. Torre de Rectoría con Mural Escultórico
+    try {
+      const rectoriaModel = await this.app.loadModel('assets/models/ai/unam_torre_rectoria.glb', {
+        autoGround: true,
+        autoCenter: true,
+      });
+      if (rectoriaModel && rectoriaModel.group) {
+        rectoriaModel.group.position.set(-65, 0, -20);
+        if (rectoriaModel.metrics.dimensions.height > 0) {
+          const factor = 58 / rectoriaModel.metrics.dimensions.height;
+          rectoriaModel.group.scale.set(factor, factor, factor);
+        }
+        this.replaceSlot('rectoria', rectoriaModel.group);
+        console.info('[UNAMScene] Modelo IA unam_torre_rectoria montado a escala en Las Islas.');
+      }
+    } catch (e) {}
+
+    // 4. Árbol Jacaranda Florido de Las Islas
+    try {
+      const jacarandaModel = await this.app.loadModel('assets/models/ai/unam_arbol_jacaranda.glb', {
+        autoGround: true,
+        autoCenter: true,
+      });
+      if (jacarandaModel && jacarandaModel.group) {
+        const jGroup = new THREE.Group();
+        jGroup.name = 'AI_Jacarandas_Ensemble';
+        const positions = [
+          { x: -16, z: -18, scale: 1.1, rot: 0.2 },
+          { x: 18, z: -22, scale: 0.95, rot: 1.5 },
+          { x: -28, z: -35, scale: 1.25, rot: 2.8 },
+          { x: 24, z: -38, scale: 1.05, rot: 4.1 },
+        ];
+        positions.forEach((p, idx) => {
+          const clone = idx === 0 ? jacarandaModel.group : jacarandaModel.group.clone();
+          clone.position.set(p.x, 0, p.z);
+          clone.scale.set(p.scale, p.scale, p.scale);
+          clone.rotation.y = p.rot;
+          jGroup.add(clone);
+        });
+        this.replaceSlot('vegetation', jGroup);
+        console.info('[UNAMScene] Ensamble IA de Jacarandas floridas distribuido en Las Islas.');
+      }
+    } catch (e) {}
+
+    // 5. Pabellón Tecnológico Kiosko PC PUMA
+    try {
+      const kioskModel = await this.app.loadModel('assets/models/ai/unam_kiosko_pcpuma.glb', {
+        autoGround: true,
+        autoCenter: true,
+      });
+      if (kioskModel && kioskModel.group) {
+        kioskModel.group.position.set(12, 0, -9);
+        kioskModel.group.scale.set(1.4, 1.4, 1.4);
+        this.replaceSlot('kiosko_pcpuma', kioskModel.group);
+        console.info('[UNAMScene] Modelo IA Kiosko PC PUMA montado junto al andador.');
+      }
+    } catch (e) {}
+
+    // 6. Luminarias de Alumbrado de Ciudad Universitaria
+    try {
+      const lampModel = await this.app.loadModel('assets/models/ai/unam_luminaria_campus.glb', {
+        autoGround: true,
+        autoCenter: true,
+      });
+      if (lampModel && lampModel.group) {
+        const lampsGroup = new THREE.Group();
+        lampsGroup.name = 'AI_Campus_Lamps_Ensemble';
+        const lampPositions = [
+          { x: 5.5, z: -12 },
+          { x: -5.5, z: -12 },
+          { x: 5.5, z: -28 },
+          { x: -5.5, z: -28 },
+        ];
+        lampPositions.forEach((pos, idx) => {
+          const clone = idx === 0 ? lampModel.group : lampModel.group.clone();
+          clone.position.set(pos.x, 0, pos.z);
+          clone.scale.set(0.65, 0.65, 0.65);
+          lampsGroup.add(clone);
+        });
+        this.replaceSlot('luminarias', lampsGroup);
+        console.info('[UNAMScene] Modelos IA Luminarias distribuidas en los andadores.');
+      }
+    } catch (e) {}
   }
 
   public update(delta: number): void {
@@ -120,6 +220,18 @@ export class UNAMScene {
       if (proceduralRectoria) {
         proceduralRectoria.visible = false;
         console.info('[UNAMScene] Placeholder procedural de Torre de Rectoría ocultado en favor del modelo IA.');
+      }
+    } else if (slot === 'kiosko_pcpuma') {
+      const proceduralKiosk = this.architecture.group.getObjectByName('Kiosco_PCPUMA_Campus');
+      if (proceduralKiosk) {
+        proceduralKiosk.visible = false;
+        console.info('[UNAMScene] Tótem procedural de PC PUMA sustituido por el Pabellón IA.');
+      }
+    } else if (slot === 'furniture') {
+      const proceduralFurniture = this.architecture.group.getObjectByName('Mobiliario_Universitario');
+      if (proceduralFurniture) {
+        proceduralFurniture.visible = false;
+        console.info('[UNAMScene] Mobiliario procedural sustituido por las bancas IA de Cantera.');
       }
     }
 
