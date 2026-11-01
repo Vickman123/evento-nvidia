@@ -12,7 +12,7 @@ import {
 
 export interface TextTo3DOptions {
   prompt: string;
-  tier?: 'Gen-2.5-Medium' | 'Gen-2.5' | 'Gen-2';
+  tier?: 'Gen-2.5-Low' | 'Gen-2.5-Medium' | 'Gen-2.5-High' | 'Gen-2.5-Minimum' | 'Gen-2';
   mesh_mode?: 'Raw' | 'Quad';
   quality?: 'medium' | 'high';
   material?: 'PBR';
@@ -94,7 +94,7 @@ export class AIModelGenerator {
   public async generateFromText(options: TextTo3DOptions): Promise<GenerationTask> {
     const formData = new FormData();
     formData.append('prompt', options.prompt);
-    formData.append('tier', options.tier || 'Gen-2.5-Medium');
+    formData.append('tier', options.tier || 'Gen-2.5-Low');
     formData.append('mesh_mode', options.mesh_mode || 'Raw');
     formData.append('quality', options.quality || 'medium');
     formData.append('material', options.material || 'PBR');
@@ -136,7 +136,7 @@ export class AIModelGenerator {
     if (options.prompt) {
       formData.append('prompt', options.prompt);
     }
-    formData.append('tier', options.tier || 'Gen-2.5-Medium');
+    formData.append('tier', options.tier || 'Gen-2.5-Low');
     formData.append('mesh_mode', options.mesh_mode || 'Raw');
     formData.append('quality', options.quality || 'medium');
     formData.append('material', options.material || 'PBR');

@@ -69,6 +69,22 @@ export class UNAMScene {
     } catch (e) {
       console.info('[UNAMScene] Modelo GLB opcional omitido o no presente; la escena procedural está completa.');
     }
+
+    // Cargar modelos generados por IA si existen en assets/models/ai/
+    try {
+      const benchModel = await this.app.loadModel('assets/models/ai/unam_banca_cantera.glb', {
+        autoGround: true,
+        autoCenter: true,
+      });
+      if (benchModel && benchModel.group) {
+        benchModel.group.position.set(4, 0, -6);
+        benchModel.group.scale.set(0.8, 0.8, 0.8);
+        this.replaceSlot('furniture', benchModel.group);
+        console.info('[UNAMScene] Modelo IA unam_banca_cantera cargado exitosamente en slot "furniture".');
+      }
+    } catch (e) {
+      // Modelo IA aún no generado o pendiente
+    }
   }
 
   public update(delta: number): void {
