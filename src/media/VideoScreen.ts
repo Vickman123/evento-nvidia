@@ -21,8 +21,8 @@ export class VideoScreen {
     this.group = new THREE.Group();
     this.group.name = 'VXR_Cinema_Screen';
 
-    // Posición inicial: frente al usuario en Las Islas
-    this.group.position.set(0, config.videoScreenHeightAboveGround, -config.videoScreenDistance);
+    // Posición inicial: 4.2m frente al usuario ubicado en el centro de la plaza (Z = 6)
+    this.group.position.set(0, config.videoScreenHeightAboveGround, 6 - config.videoScreenDistance);
     this.group.scale.set(0.001, 0.001, 0.001); // Oculta inicialmente
     this.group.visible = false;
 

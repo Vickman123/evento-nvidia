@@ -24,7 +24,8 @@ export class PCpumaOutro {
     this.app = app;
     this.group = new THREE.Group();
     this.group.name = 'VXR_PC_PUMA_Outro';
-    this.group.position.set(0, 1.8, -3.2);
+    // Posición frente al observador ubicado en el centro de la plaza (Z = 6)
+    this.group.position.set(0, 1.8, 6 - 3.2);
     this.group.visible = false;
 
     // 1. Canvas 2D de alta resolución para renderizado nítido en Meta Quest

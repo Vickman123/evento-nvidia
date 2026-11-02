@@ -3,16 +3,19 @@ import { Environment } from './Environment.js';
 import { Architecture } from './Architecture.js';
 import { Vegetation } from './Vegetation.js';
 import { Lighting } from './Lighting.js';
+import { BibliotecaCentralDiorama } from './BibliotecaCentralDiorama.js';
 import type { XRApp } from '../vxr/XRApp.js';
 
 /**
  * Escenario principal de Ciudad Universitaria para VXR Core.
- * Integra entorno atmosférico, arquitectura emblemática (Biblioteca Central, Rectoría),
- * áreas verdes de Las Islas, iluminación solar PBR y soporte opcional para modelos GLB.
+ * Integra entorno atmosférico, el Diorama de alta fidelidad de la Biblioteca Central y su Plaza
+ * (con podio arquitectónico, losetas de terracota, jacarandas y muro de relieves),
+ * iluminación solar PBR y soporte modular para modelos GLB.
  */
 export class UNAMScene {
   public readonly group: THREE.Group;
   public readonly environment: Environment;
+  public readonly diorama: BibliotecaCentralDiorama;
   public readonly architecture: Architecture;
   public readonly vegetation: Vegetation;
   public readonly lighting: Lighting;
@@ -28,21 +31,27 @@ export class UNAMScene {
 
     // 1. Instanciar subsistemas de la escena
     this.environment = new Environment();
+    this.diorama = new BibliotecaCentralDiorama();
     this.architecture = new Architecture();
     this.vegetation = new Vegetation();
     this.lighting = new Lighting();
 
-    // 2. Montar en el grafo
-    this.group.add(this.environment.group);
+    // 2. Montar en el grafo (el Diorama es la pieza central)
+    this.group.add(this.diorama.group);
+    this.group.add(this.lighting.group);
+
+    // Los edificios lejanos se mantienen ocultos por defecto para dar protagonismo total al Diorama
+    this.architecture.group.visible = false;
+    this.vegetation.group.visible = false;
     this.group.add(this.architecture.group);
     this.group.add(this.vegetation.group);
-    this.group.add(this.lighting.group);
 
     // 3. Añadir a la escena nativa de VXR Core
     this.app.scene.nativeScene.add(this.group);
 
-    // 4. Configurar niebla suave en VXR Core para profundidad aérea
-    this.app.scene.setFog(0xdcebf8, 30, 220);
+    // 4. Configurar atmósfera y niebla profunda de exposición arquitectónica
+    this.app.scene.setBackground(0x0c1420);
+    this.app.scene.setFog(0x0c1420, 50, 180);
 
     // 5. Cargar modelo complementario si está disponible
     this.tryLoadExternalModels();
@@ -242,6 +251,7 @@ export class UNAMScene {
   }
 
   public dispose(): void {
+    this.diorama.dispose();
     this.environment.dispose();
     this.architecture.dispose();
     this.vegetation.dispose();

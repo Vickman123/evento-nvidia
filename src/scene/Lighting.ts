@@ -16,33 +16,33 @@ export class Lighting {
     this.group.name = 'VXR_UNAM_Lighting';
 
     // 1. Luz solar direccional principal (Key Light)
-    // Inclinación natural de las 13:00 hrs en la Ciudad de México
-    this.sunLight = new THREE.DirectionalLight(0xfffaed, 1.35);
+    // Inclinación a 45° tipo maqueta arquitectónica institucional
+    this.sunLight = new THREE.DirectionalLight(0xfffaed, 1.85);
     this.sunLight.name = 'SunKeyLight';
-    this.sunLight.position.set(28, 48, 22);
+    this.sunLight.position.set(24, 36, 20);
 
     // Configuración rigurosa de sombras para no degradar rendimiento en Meta Quest
     this.sunLight.castShadow = true;
-    this.sunLight.shadow.mapSize.width = 1024;
-    this.sunLight.shadow.mapSize.height = 1024;
+    this.sunLight.shadow.mapSize.width = 2048;
+    this.sunLight.shadow.mapSize.height = 2048;
     this.sunLight.shadow.camera.near = 0.5;
-    this.sunLight.shadow.camera.far = 130;
-    this.sunLight.shadow.camera.left = -45;
-    this.sunLight.shadow.camera.right = 45;
-    this.sunLight.shadow.camera.top = 45;
-    this.sunLight.shadow.camera.bottom = -45;
+    this.sunLight.shadow.camera.far = 120;
+    this.sunLight.shadow.camera.left = -35;
+    this.sunLight.shadow.camera.right = 35;
+    this.sunLight.shadow.camera.top = 35;
+    this.sunLight.shadow.camera.bottom = -35;
     this.sunLight.shadow.bias = -0.0003;
     this.sunLight.shadow.normalBias = 0.02;
 
     this.group.add(this.sunLight);
 
-    // 2. Luz hemisférica (cielo azul / rebote de pasto y tezontle)
-    this.hemiLight = new THREE.HemisphereLight(0x70a5d8, 0x475e3e, 0.55);
+    // 2. Luz hemisférica (cielo cálido y rebote de cantera)
+    this.hemiLight = new THREE.HemisphereLight(0x90bfe8, 0x6e5040, 0.65);
     this.hemiLight.name = 'SkyBounceHemiLight';
     this.group.add(this.hemiLight);
 
-    // 3. Luz ambiental suave para no dejar sombras negras
-    this.ambientLight = new THREE.AmbientLight(0xffffff, 0.25);
+    // 3. Luz ambiental suave de relleno
+    this.ambientLight = new THREE.AmbientLight(0xffffff, 0.35);
     this.ambientLight.name = 'AmbientFillLight';
     this.group.add(this.ambientLight);
   }

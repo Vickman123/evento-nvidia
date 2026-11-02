@@ -116,9 +116,8 @@ export class Environment {
     return group;
   }
 
-  public update(delta: number): void {
-    // Rotación sutil de la capa de nubes para dinamismo atmosférico
-    this.cloudsGroup.rotation.y += delta * 0.003;
+  public update(_delta: number): void {
+    // Sin rotación artificial de nubes para evitar sensación de giro o desorientación en VR
   }
 
   public dispose(): void {

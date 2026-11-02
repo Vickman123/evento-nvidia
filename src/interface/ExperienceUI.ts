@@ -25,8 +25,8 @@ export class ExperienceUI {
     this.group = new THREE.Group();
     this.group.name = 'VXR_InVR_HUD';
 
-    // Posicionada discretamente en el campo de visión inferior-frontal (Y=1.1, Z=-2.5)
-    this.group.position.set(0, 1.15, -2.4);
+    // Posicionada discretamente en el campo de visión inferior-frontal (frente a Z = 6)
+    this.group.position.set(0, 1.15, 6 - 2.4);
     this.group.rotation.x = -0.15; // Inclinación ergonómica hacia los ojos del usuario
     this.group.scale.set(0.001, 0.001, 0.001);
     this.group.visible = false;

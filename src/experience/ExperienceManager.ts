@@ -218,8 +218,8 @@ export class ExperienceManager {
       console.info('[ExperienceManager] Modo Desktop o visor no conectado; continuando en simulación de escritorio:', err);
     }
 
-    // Centrar la cámara en el origen peatonal de Las Islas
-    this.app.resetCamera([0, 1.6, 0], [0, 1.6, -30]);
+    // Centrar la cámara en el centro de la plaza de la Biblioteca Central
+    this.app.resetCamera([0, 1.6, 6], [0, 2.5, -20]);
 
     // Iniciar audio ambiental
     this.audioManager.startAmbient();
@@ -337,8 +337,8 @@ export class ExperienceManager {
     // 3. Restaurar iluminación diurna natural
     this.unamScene.setCinemaMode(false);
 
-    // 4. Reposicionar cámara a vista inicial
-    this.app.resetCamera([0, 1.6, 0], [0, 1.6, -30]);
+    // 4. Reposicionar cámara a vista inicial en el centro de la plaza
+    this.app.resetCamera([0, 1.6, 6], [0, 2.5, -20]);
 
     // 5. Regresar a pantalla de bienvenida IDLE
     this.welcomeScreen.show();
