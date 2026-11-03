@@ -97,6 +97,13 @@ export class XRRenderer {
   }
 
   /**
+   * Returns the Three.js WebXRManager instance.
+   */
+  public get xr(): THREE.WebXRManager {
+    return this.nativeRenderer.xr;
+  }
+
+  /**
    * Recalculates canvas size and camera aspect ratio from the container dimensions.
    */
   private updateSize(): void {

@@ -35,6 +35,7 @@ export class ExperienceManager {
   private stateListeners: Set<StateListener> = new Set();
   private explorationTimer: number | null = null;
   private explorationSecondsLeft: number = 0;
+  private needsVRAlignment: boolean = false;
 
   constructor(app: XRApp, config: Partial<ExperienceConfigData> = {}) {
     this.app = app;
@@ -99,8 +100,16 @@ export class ExperienceManager {
     // F. Loop de actualización continuo
     this.app.onUpdate((delta) => {
       this.unamScene.update(delta);
+      if (this.needsVRAlignment && (this.currentState === ExperienceState.TRANSITION_TO_CINEMA || this.currentState === ExperienceState.VIDEO_PLAYBACK)) {
+        this.videoScreen.placeInFrontOf(this.app, 3.6, 0.2);
+        this.needsVRAlignment = false;
+      }
       this.videoScreen.update();
     });
+  }
+
+  public requestVRAlignment(): void {
+    this.needsVRAlignment = true;
   }
 
   private setupSyncChannel(): void {
@@ -149,7 +158,7 @@ export class ExperienceManager {
 
     // Recentrar la pantalla de video frente a la mirada si el usuario presiona el gatillo en VR
     if (this.currentState === ExperienceState.VIDEO_PLAYBACK) {
-      this.videoScreen.placeInFrontOf(this.app.camera, 3.6, 0.2);
+      this.videoScreen.placeInFrontOf(this.app, 3.6, 0.2);
     }
 
     if (this.currentState === ExperienceState.RESET_READY || this.currentState === ExperienceState.PC_PUMA_OUTRO) {
@@ -305,7 +314,8 @@ export class ExperienceManager {
     this.experienceUI.hideHUD();
 
     // Posicionar la pantalla exactamente frente a la mirada del usuario (3.6m a nivel de ojos)
-    this.videoScreen.placeInFrontOf(this.app.camera, 3.6, 0.2);
+    this.videoScreen.placeInFrontOf(this.app, 3.6, 0.2);
+    this.needsVRAlignment = true;
 
     // Asegurar que el elemento de video esté conectado a la pantalla virtual de inmediato
     const videoEl = this.videoManager.getVideoElement();

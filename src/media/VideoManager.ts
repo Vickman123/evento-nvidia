@@ -46,16 +46,16 @@ export class VideoManager {
       video.volume = 1.0;
 
       // CRÍTICO PARA META QUEST BROWSER / ANDROID CHROMIUM:
-      // Si el elemento <video> no está anexado al DOM, el pipeline MediaCodec
-      // no decodifica fotogramas para texturas WebGL externas ni avanza el stream.
+      // Debe tener dimensiones no nulas y opacidad visible (>0) para que el compositor
+      // de Chromium y MediaCodec mantengan la decodificación activa sin suspender fotogramas.
       video.style.position = 'fixed';
-      video.style.top = '0';
-      video.style.left = '0';
-      video.style.width = '1px';
-      video.style.height = '1px';
-      video.style.opacity = '0.001';
+      video.style.bottom = '0';
+      video.style.right = '0';
+      video.style.width = '320px';
+      video.style.height = '180px';
+      video.style.opacity = '0.01';
       video.style.pointerEvents = 'none';
-      video.style.zIndex = '-99999';
+      video.style.zIndex = '0';
 
       if (!document.body.contains(video)) {
         document.body.appendChild(video);

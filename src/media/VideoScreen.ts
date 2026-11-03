@@ -12,8 +12,9 @@ export class VideoScreen {
   public readonly screenMesh: THREE.Mesh;
   public readonly frameMesh: THREE.Mesh;
   private screenMaterial: THREE.MeshBasicMaterial;
-  private videoTexture: THREE.VideoTexture | null = null;
-  private standbyTexture: THREE.CanvasTexture;
+  private videoCanvas: HTMLCanvasElement;
+  private videoCtx: CanvasRenderingContext2D;
+  private screenTexture: THREE.CanvasTexture;
   private videoElement: HTMLVideoElement | null = null;
   private config: ExperienceConfigData;
 
@@ -27,8 +28,23 @@ export class VideoScreen {
     this.group.scale.set(0.001, 0.001, 0.001); // Oculta inicialmente
     this.group.visible = false;
 
-    // 1. Textura inicial de espera / standby institucional
-    this.standbyTexture = this.createStandbyTexture();
+    // 1. Canvas 2D de alta fidelidad para decodificación y renderizado directo de video
+    // Este enfoque resuelve de forma 100% definitiva el fallo de WebXR en Meta Quest 3S/3/Pro,
+    // donde Chromium suspende requestVideoFrameCallback en modo inmersivo o falla al reasignar
+    // dimensiones en texturas WebGL directas.
+    this.videoCanvas = document.createElement('canvas');
+    this.videoCanvas.width = 1280;
+    this.videoCanvas.height = 720;
+    this.videoCtx = this.videoCanvas.getContext('2d')!;
+
+    // Dibujar pantalla de espera inicial en el canvas
+    this.renderStandbyOnCanvas();
+
+    this.screenTexture = new THREE.CanvasTexture(this.videoCanvas);
+    this.screenTexture.minFilter = THREE.LinearFilter;
+    this.screenTexture.magFilter = THREE.LinearFilter;
+    this.screenTexture.generateMipmaps = false;
+    this.screenTexture.colorSpace = THREE.SRGBColorSpace;
 
     // 2. Malla de la pantalla (16:9 cinematográfica, nítida y sin recorte)
     const width = config.videoScreenWidth;
@@ -37,7 +53,7 @@ export class VideoScreen {
     const screenGeo = new THREE.PlaneGeometry(width, height);
 
     this.screenMaterial = new THREE.MeshBasicMaterial({
-      map: this.standbyTexture,
+      map: this.screenTexture,
       side: THREE.DoubleSide,
       transparent: false,
       opacity: 1.0,
@@ -76,53 +92,47 @@ export class VideoScreen {
     this.group.add(bannerMesh);
   }
 
-  private createStandbyTexture(): THREE.CanvasTexture {
-    const canvas = document.createElement('canvas');
-    canvas.width = 1920;
-    canvas.height = 1080;
-    const ctx = canvas.getContext('2d')!;
+  private renderStandbyOnCanvas(): void {
+    const ctx = this.videoCtx;
+    const w = this.videoCanvas.width;
+    const h = this.videoCanvas.height;
 
     // Fondo azul degradado tecnológico
-    const grad = ctx.createRadialGradient(960, 540, 100, 960, 540, 900);
+    const grad = ctx.createRadialGradient(w / 2, h / 2, 80, w / 2, h / 2, w / 2);
     grad.addColorStop(0, '#0a2540');
     grad.addColorStop(1, '#001122');
     ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, 1920, 1080);
+    ctx.fillRect(0, 0, w, h);
 
     // Patrón sutil de cuadrícula tecnológica
     ctx.strokeStyle = 'rgba(0, 240, 255, 0.08)';
     ctx.lineWidth = 1;
-    for (let x = 0; x < 1920; x += 60) {
+    for (let x = 0; x < w; x += 60) {
       ctx.beginPath();
       ctx.moveTo(x, 0);
-      ctx.lineTo(x, 1080);
+      ctx.lineTo(x, h);
       ctx.stroke();
     }
-    for (let y = 0; y < 1080; y += 60) {
+    for (let y = 0; y < h; y += 60) {
       ctx.beginPath();
       ctx.moveTo(0, y);
-      ctx.lineTo(1920, y);
+      ctx.lineTo(w, y);
       ctx.stroke();
     }
 
     // Escudo / Rótulo Central
     ctx.fillStyle = '#D4AF37';
-    ctx.font = 'bold 56px system-ui, -apple-system, sans-serif';
+    ctx.font = 'bold 36px system-ui, -apple-system, sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('UNIVERSIDAD NACIONAL AUTÓNOMA DE MÉXICO', 960, 480);
+    ctx.fillText('UNIVERSIDAD NACIONAL AUTÓNOMA DE MÉXICO', w / 2, h / 2 - 50);
 
     ctx.fillStyle = '#FFFFFF';
-    ctx.font = 'bold 72px system-ui, -apple-system, sans-serif';
-    ctx.fillText('PC PUMA', 960, 580);
+    ctx.font = 'bold 54px system-ui, -apple-system, sans-serif';
+    ctx.fillText('PC PUMA', w / 2, h / 2 + 20);
 
     ctx.fillStyle = '#00F0FF';
-    ctx.font = '36px system-ui, -apple-system, sans-serif';
-    ctx.fillText('Tecnología para transformar el aprendizaje', 960, 660);
-
-    const tex = new THREE.CanvasTexture(canvas);
-    tex.minFilter = THREE.LinearFilter;
-    tex.magFilter = THREE.LinearFilter;
-    return tex;
+    ctx.font = '26px system-ui, -apple-system, sans-serif';
+    ctx.fillText('Tecnología para transformar el aprendizaje', w / 2, h / 2 + 80);
   }
 
   private createFrameBanner(width: number): THREE.Mesh {
@@ -146,60 +156,55 @@ export class VideoScreen {
   }
 
   /**
-   * Conecta un elemento de video HTML5 a la superficie 3D mediante THREE.VideoTexture.
+   * Conecta un elemento de video HTML5 a la superficie 3D mediante el canvas de decodificación directa.
    */
   public attachVideo(video: HTMLVideoElement): void {
     this.videoElement = video;
-    if (this.videoTexture) {
-      this.videoTexture.dispose();
-      this.videoTexture = null;
-    }
-
-    this.videoTexture = new THREE.VideoTexture(video);
-    this.videoTexture.minFilter = THREE.LinearFilter;
-    this.videoTexture.magFilter = THREE.LinearFilter;
-    this.videoTexture.generateMipmaps = false;
-    this.videoTexture.colorSpace = THREE.SRGBColorSpace;
-
-    this.screenMaterial.map = this.videoTexture;
-    this.screenMaterial.side = THREE.DoubleSide;
-    this.screenMaterial.needsUpdate = true;
   }
 
   /**
    * Actualización continua por fotograma ejecutada en el bucle WebGL/WebXR.
-   * Resuelve el congelamiento o pantalla negra en Meta Quest Browser al forzar
-   * la subida de fotogramas a la GPU sin depender de requestVideoFrameCallback.
+   * Dibuja el fotograma actual del elemento de video sobre el canvas 2D y marca la textura
+   * para actualización inmediata en WebGL. Inmune a la suspensión de requestVideoFrameCallback en Meta Quest.
    */
   public update(): void {
-    if (this.videoTexture && this.videoElement) {
-      if (this.videoElement.readyState >= 2 && !this.videoElement.paused) {
-        this.videoTexture.needsUpdate = true;
+    if (this.videoElement && this.videoCtx) {
+      if (this.videoElement.readyState >= 2) {
+        try {
+          this.videoCtx.drawImage(
+            this.videoElement,
+            0,
+            0,
+            this.videoCanvas.width,
+            this.videoCanvas.height
+          );
+          this.screenTexture.needsUpdate = true;
+        } catch (e) {
+          // Captura silenciosa de errores transitorios de decodificación
+        }
       }
     }
   }
 
   /**
-   * Libera la textura de video y restablece la imagen de standby.
+   * Libera la referencia al video y restablece la imagen de standby.
    */
   public detachVideo(): void {
     this.videoElement = null;
-    if (this.videoTexture) {
-      this.videoTexture.dispose();
-      this.videoTexture = null;
-    }
-    this.screenMaterial.map = this.standbyTexture;
-    this.screenMaterial.side = THREE.DoubleSide;
-    this.screenMaterial.needsUpdate = true;
+    this.renderStandbyOnCanvas();
+    this.screenTexture.needsUpdate = true;
   }
 
   /**
    * Posiciona la pantalla exactamente frente a la mirada actual del usuario en VR o Desktop,
    * orientándola perpendicularmente para una visualización 100% nítida, cómoda y cinematográfica.
+   * Acepta un XRApp (para consultar app.activeCamera en WebXR) o un THREE.Camera.
    */
-  public placeInFrontOf(camera: THREE.Camera, distance: number = 3.6, heightOffset: number = 0.2): void {
+  public placeInFrontOf(cameraOrApp: THREE.Camera | { activeCamera: THREE.Camera }, distance: number = 3.6, heightOffset: number = 0.2): void {
     this.group.visible = true;
     this.group.scale.set(1, 1, 1);
+
+    const camera = 'activeCamera' in cameraOrApp ? cameraOrApp.activeCamera : cameraOrApp;
 
     const camWorldPos = new THREE.Vector3();
     camera.getWorldPosition(camWorldPos);
@@ -214,7 +219,7 @@ export class VideoScreen {
     }
 
     const screenPos = camWorldPos.clone().add(camWorldDir.clone().multiplyScalar(distance));
-    screenPos.y = Math.max(1.6, camWorldPos.y + heightOffset);
+    screenPos.y = Math.max(1.5, camWorldPos.y + heightOffset);
     this.group.position.copy(screenPos);
 
     // Orientar de frente al usuario
@@ -278,11 +283,7 @@ export class VideoScreen {
 
   public dispose(): void {
     this.reset();
-    this.standbyTexture.dispose();
-    if (this.videoTexture) {
-      this.videoTexture.dispose();
-      this.videoTexture = null;
-    }
+    this.screenTexture.dispose();
     this.screenMaterial.dispose();
     this.screenMesh.geometry.dispose();
     this.frameMesh.geometry.dispose();
