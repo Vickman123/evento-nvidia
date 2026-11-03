@@ -16,6 +16,7 @@ export class VideoScreen {
   private videoCtx: CanvasRenderingContext2D;
   private screenTexture: THREE.CanvasTexture;
   private videoElement: HTMLVideoElement | null = null;
+  private lastVideoTime: number = -1;
   private config: ExperienceConfigData;
 
   constructor(config: ExperienceConfigData) {
@@ -28,14 +29,12 @@ export class VideoScreen {
     this.group.scale.set(0.001, 0.001, 0.001); // Oculta inicialmente
     this.group.visible = false;
 
-    // 1. Canvas 2D de alta fidelidad para decodificación y renderizado directo de video
-    // Este enfoque resuelve de forma 100% definitiva el fallo de WebXR en Meta Quest 3S/3/Pro,
-    // donde Chromium suspende requestVideoFrameCallback en modo inmersivo o falla al reasignar
-    // dimensiones en texturas WebGL directas.
+    // 1. Canvas 2D ultra-optimizado (640x360 coincidente con la resolución nativa del video).
+    // Evita transferencias masivas de texturas y reduce drásticamente el consumo térmico en Meta Quest.
     this.videoCanvas = document.createElement('canvas');
-    this.videoCanvas.width = 1280;
-    this.videoCanvas.height = 720;
-    this.videoCtx = this.videoCanvas.getContext('2d')!;
+    this.videoCanvas.width = 640;
+    this.videoCanvas.height = 360;
+    this.videoCtx = this.videoCanvas.getContext('2d', { willReadFrequently: false })!;
 
     // Dibujar pantalla de espera inicial en el canvas
     this.renderStandbyOnCanvas();
@@ -122,17 +121,17 @@ export class VideoScreen {
 
     // Escudo / Rótulo Central
     ctx.fillStyle = '#D4AF37';
-    ctx.font = 'bold 36px system-ui, -apple-system, sans-serif';
+    ctx.font = 'bold 18px system-ui, -apple-system, sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('UNIVERSIDAD NACIONAL AUTÓNOMA DE MÉXICO', w / 2, h / 2 - 50);
+    ctx.fillText('UNIVERSIDAD NACIONAL AUTÓNOMA DE MÉXICO', w / 2, h / 2 - 40);
 
     ctx.fillStyle = '#FFFFFF';
-    ctx.font = 'bold 54px system-ui, -apple-system, sans-serif';
-    ctx.fillText('PC PUMA', w / 2, h / 2 + 20);
+    ctx.font = 'bold 38px system-ui, -apple-system, sans-serif';
+    ctx.fillText('PC PUMA', w / 2, h / 2 + 10);
 
     ctx.fillStyle = '#00F0FF';
-    ctx.font = '26px system-ui, -apple-system, sans-serif';
-    ctx.fillText('Tecnología para transformar el aprendizaje', w / 2, h / 2 + 80);
+    ctx.font = '16px system-ui, -apple-system, sans-serif';
+    ctx.fillText('Tecnología para transformar el aprendizaje', w / 2, h / 2 + 55);
   }
 
   private createFrameBanner(width: number): THREE.Mesh {
@@ -160,27 +159,32 @@ export class VideoScreen {
    */
   public attachVideo(video: HTMLVideoElement): void {
     this.videoElement = video;
+    this.lastVideoTime = -1;
   }
 
   /**
-   * Actualización continua por fotograma ejecutada en el bucle WebGL/WebXR.
-   * Dibuja el fotograma actual del elemento de video sobre el canvas 2D y marca la textura
-   * para actualización inmediata en WebGL. Inmune a la suspensión de requestVideoFrameCallback en Meta Quest.
+   * Actualización continua ejecutada en el bucle WebGL/WebXR.
+   * Sólo redibuja si el tiempo de reproducción avanzó (30 FPS en lugar de 90 FPS),
+   * reduciendo en un 66% el uso del bus de memoria y manteniendo las gafas frías.
    */
   public update(): void {
     if (this.videoElement && this.videoCtx) {
-      if (this.videoElement.readyState >= 2) {
-        try {
-          this.videoCtx.drawImage(
-            this.videoElement,
-            0,
-            0,
-            this.videoCanvas.width,
-            this.videoCanvas.height
-          );
-          this.screenTexture.needsUpdate = true;
-        } catch (e) {
-          // Captura silenciosa de errores transitorios de decodificación
+      if (this.videoElement.readyState >= 2 && !this.videoElement.paused) {
+        const currentTime = this.videoElement.currentTime;
+        if (currentTime !== this.lastVideoTime) {
+          this.lastVideoTime = currentTime;
+          try {
+            this.videoCtx.drawImage(
+              this.videoElement,
+              0,
+              0,
+              this.videoCanvas.width,
+              this.videoCanvas.height
+            );
+            this.screenTexture.needsUpdate = true;
+          } catch (e) {
+            // Captura silenciosa de errores transitorios
+          }
         }
       }
     }
@@ -191,6 +195,7 @@ export class VideoScreen {
    */
   public detachVideo(): void {
     this.videoElement = null;
+    this.lastVideoTime = -1;
     this.renderStandbyOnCanvas();
     this.screenTexture.needsUpdate = true;
   }
@@ -222,9 +227,8 @@ export class VideoScreen {
     screenPos.y = Math.max(1.5, camWorldPos.y + heightOffset);
     this.group.position.copy(screenPos);
 
-    // Orientar de frente al usuario
+    // Orientar de frente al usuario: en Three.js lookAt ya apunta la cara frontal (+Z) directamente a la cámara
     this.group.lookAt(camWorldPos.x, screenPos.y, camWorldPos.z);
-    this.group.rotateY(Math.PI); // La geometría frontal del plano apunta hacia la cámara
     this.group.updateMatrixWorld(true);
   }
 

@@ -11,7 +11,7 @@ export class Lighting {
   public hemiLight: THREE.HemisphereLight;
   public ambientLight: THREE.AmbientLight;
 
-  constructor() {
+  constructor(enableShadows: boolean = false) {
     this.group = new THREE.Group();
     this.group.name = 'VXR_UNAM_Lighting';
 
@@ -21,18 +21,20 @@ export class Lighting {
     this.sunLight.name = 'SunKeyLight';
     this.sunLight.position.set(24, 36, 20);
 
-    // Configuración rigurosa de sombras para no degradar rendimiento en Meta Quest
-    this.sunLight.castShadow = true;
-    this.sunLight.shadow.mapSize.width = 2048;
-    this.sunLight.shadow.mapSize.height = 2048;
-    this.sunLight.shadow.camera.near = 0.5;
-    this.sunLight.shadow.camera.far = 120;
-    this.sunLight.shadow.camera.left = -35;
-    this.sunLight.shadow.camera.right = 35;
-    this.sunLight.shadow.camera.top = 35;
-    this.sunLight.shadow.camera.bottom = -35;
-    this.sunLight.shadow.bias = -0.0003;
-    this.sunLight.shadow.normalBias = 0.02;
+    // Sombras dinámicas desactivadas para evitar sobrecalentamiento en Meta Quest
+    this.sunLight.castShadow = enableShadows;
+    if (enableShadows) {
+      this.sunLight.shadow.mapSize.width = 1024;
+      this.sunLight.shadow.mapSize.height = 1024;
+      this.sunLight.shadow.camera.near = 0.5;
+      this.sunLight.shadow.camera.far = 120;
+      this.sunLight.shadow.camera.left = -35;
+      this.sunLight.shadow.camera.right = 35;
+      this.sunLight.shadow.camera.top = 35;
+      this.sunLight.shadow.camera.bottom = -35;
+      this.sunLight.shadow.bias = -0.0003;
+      this.sunLight.shadow.normalBias = 0.02;
+    }
 
     this.group.add(this.sunLight);
 

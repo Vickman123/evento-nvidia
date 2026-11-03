@@ -50,8 +50,8 @@ export class WebXRRuntime implements XRRuntime {
       // 2. Store desktop pixel ratio and apply Quest-optimized ratio
       if (this.options.questOptimization) {
         this.previousPixelRatio = this.app.nativeRenderer.getPixelRatio();
-        // Clamping pixel ratio between 1.0 and 1.25 prevents GPU thermal throttling on Quest 2/3
-        this.app.nativeRenderer.setPixelRatio(Math.min(window.devicePixelRatio || 1.0, 1.25));
+        // Clamping pixel ratio to 1.0 prevents GPU thermal throttling on Quest 2/3/3S
+        this.app.nativeRenderer.setPixelRatio(1.0);
       }
 
       // 3. Negotiate target frame rate safely (e.g. 90Hz)

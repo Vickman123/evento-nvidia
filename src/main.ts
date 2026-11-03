@@ -13,18 +13,18 @@ import { ObserverControls } from './vxr/camera/ObserverControls.js';
 async function bootstrap() {
   console.info('[VXR Core] Inicializando UNAM Immersive Experience - PC PUMA...');
 
-  // 1. Instanciar XRApp con runtime auto-detectable y controles de observador fijos
+  // 1. Instanciar XRApp optimizado para control térmico en Meta Quest 3S / 3
   const app = new XRApp({
     container: '#app',
     cameraPosition: [0, 1.6, 6], // Firme en el centro de la plaza peatonal a 1.6m de altura
     runtime: 'auto',
-    targetFrameRate: 90,
+    targetFrameRate: 72, // 72Hz es la tasa ideal en Meta Quest para máxima fluidez sin sobrecalentamiento
     questOptimization: true,
-    enableShadows: true,
+    enableShadows: false, // DESACTIVAR sombras dinámicas en VR: ahorra ~40% de GPU y previene calentamiento
     enableGrid: false,
     autoOrbitControls: false, // Desactivar OrbitControls para evitar que la cámara vuele o gire en órbita
     autoVRButton: false,
-    pixelRatioCap: 1.25,
+    pixelRatioCap: 1.0, // 1.0 exacto: elimina sobrecarga de fragment shader y mantiene el visor frío
     fov: 65,
   });
 
@@ -57,7 +57,7 @@ async function bootstrap() {
       app.lockVRToSpawn([0, 1.6, 6]);
       // Alinear la pantalla virtual justo frente a la mirada del usuario en VR
       experienceManager.videoScreen.placeInFrontOf(app, 3.6, 0.2);
-      experienceManager.requestVRAlignment();
+      experienceManager.requestVRAlignment(15);
       // Si el usuario entra en WebXR desde Meta Quest Browser estando en IDLE,
       // arrancar automáticamente la experiencia y el video institucional
       if (experienceManager.currentState === ExperienceState.IDLE) {

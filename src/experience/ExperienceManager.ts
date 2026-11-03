@@ -35,7 +35,7 @@ export class ExperienceManager {
   private stateListeners: Set<StateListener> = new Set();
   private explorationTimer: number | null = null;
   private explorationSecondsLeft: number = 0;
-  private needsVRAlignment: boolean = false;
+  private vrAlignmentFrames: number = 0;
 
   constructor(app: XRApp, config: Partial<ExperienceConfigData> = {}) {
     this.app = app;
@@ -100,16 +100,18 @@ export class ExperienceManager {
     // F. Loop de actualización continuo
     this.app.onUpdate((delta) => {
       this.unamScene.update(delta);
-      if (this.needsVRAlignment && (this.currentState === ExperienceState.TRANSITION_TO_CINEMA || this.currentState === ExperienceState.VIDEO_PLAYBACK)) {
-        this.videoScreen.placeInFrontOf(this.app, 3.6, 0.2);
-        this.needsVRAlignment = false;
+      if (this.vrAlignmentFrames > 0) {
+        this.vrAlignmentFrames--;
+        if (this.currentState === ExperienceState.TRANSITION_TO_CINEMA || this.currentState === ExperienceState.VIDEO_PLAYBACK) {
+          this.videoScreen.placeInFrontOf(this.app, 3.6, 0.2);
+        }
       }
       this.videoScreen.update();
     });
   }
 
-  public requestVRAlignment(): void {
-    this.needsVRAlignment = true;
+  public requestVRAlignment(frames: number = 10): void {
+    this.vrAlignmentFrames = frames;
   }
 
   private setupSyncChannel(): void {
@@ -315,7 +317,7 @@ export class ExperienceManager {
 
     // Posicionar la pantalla exactamente frente a la mirada del usuario (3.6m a nivel de ojos)
     this.videoScreen.placeInFrontOf(this.app, 3.6, 0.2);
-    this.needsVRAlignment = true;
+    this.requestVRAlignment(10);
 
     // Asegurar que el elemento de video esté conectado a la pantalla virtual de inmediato
     const videoEl = this.videoManager.getVideoElement();

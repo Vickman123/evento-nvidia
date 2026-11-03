@@ -35,7 +35,7 @@ export class UNAMScene {
     this.diorama = new BibliotecaCentralDiorama();
     this.architecture = new Architecture();
     this.vegetation = new Vegetation();
-    this.lighting = new Lighting();
+    this.lighting = new Lighting(false); // Sombras dinámicas desactivadas para máxima estabilidad térmica en VR
 
     // 2. Montar en el grafo (cielo diurno, diorama central e iluminación PBR)
     this.group.add(this.environment.group);
