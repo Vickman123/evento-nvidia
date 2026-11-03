@@ -82,7 +82,7 @@ export class WelcomeScreen {
             align-items: center;
             gap: 10px;
           ">
-            <span>🥽 EXPLORAR ENTORNO 360°</span>
+            <span>🥽 INICIAR EXPERIENCIA Y VER VIDEO</span>
           </button>
 
           <button id="btn-direct-video" style="
@@ -103,7 +103,7 @@ export class WelcomeScreen {
             align-items: center;
             gap: 10px;
           ">
-            <span>🎬 VER VIDEO INSTITUCIONAL</span>
+            <span>🎬 ENTRAR DIRECTO A VIDEO</span>
           </button>
         </div>
 

@@ -40,15 +40,6 @@ async function bootstrap() {
     }
   );
 
-  // Desactivar controles de ratón y anclar al spawn point exacto cuando se entre a WebXR inmersivo
-  app.session.onStateChange((isVR) => {
-    observerControls.enabled = !isVR;
-    if (isVR) {
-      observerControls.resetToCenter();
-      app.lockVRToSpawn([0, 1.6, 6]);
-    }
-  });
-
   // 3. Instanciar el gestor de experiencia y máquina de estados
   const experienceManager = new ExperienceManager(app);
   const performanceMonitor = new PerformanceMonitor(app);
@@ -56,6 +47,20 @@ async function bootstrap() {
   (window as any).__UNAM_EXPERIENCE__ = experienceManager;
   (window as any).__VXR_APP__ = app;
   (window as any).__OBSERVER_CONTROLS__ = observerControls;
+
+  // Desactivar controles de ratón y anclar al spawn point exacto cuando se entre a WebXR inmersivo
+  app.session.onStateChange((isVR) => {
+    observerControls.enabled = !isVR;
+    if (isVR) {
+      observerControls.resetToCenter();
+      app.lockVRToSpawn([0, 1.6, 6]);
+      // Si el usuario entra en WebXR desde Meta Quest Browser estando en IDLE,
+      // arrancar automáticamente la experiencia y el video institucional
+      if (experienceManager.currentState === ExperienceState.IDLE) {
+        experienceManager.startExperience();
+      }
+    }
+  });
 
   // 4. Crear barra flotante de selección de vista y reproducción de video
   createViewModeUI(observerControls, experienceManager);
@@ -143,8 +148,9 @@ function createViewModeUI(controls: ObserverControls, exp: ExperienceManager): v
     styleButton(btnMaqueta, false);
     if (exp.currentState === ExperienceState.IDLE) {
       exp.startExperience();
+    } else {
+      exp.transitionToCinema();
     }
-    exp.transitionToCinema();
   });
 
   container.appendChild(btnGround);

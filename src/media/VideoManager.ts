@@ -30,16 +30,37 @@ export class VideoManager {
   private createVideoElement(): void {
     if (this.videoElement) return;
 
-    const video = document.createElement('video');
-    video.crossOrigin = 'anonymous';
-    video.playsInline = true;
-    video.setAttribute('playsinline', '');
-    video.setAttribute('webkit-playsinline', '');
-    video.preload = 'auto';
-    video.loop = false;
-    video.autoplay = false;
-    video.muted = false; // Audio habilitado tras el click del usuario en "INICIAR EXPERIENCIA"
-    video.volume = 1.0;
+    // Verificar si ya existe en el DOM para evitar duplicados en recargas
+    let video = document.getElementById('vxr-video-stream') as HTMLVideoElement | null;
+    if (!video) {
+      video = document.createElement('video');
+      video.id = 'vxr-video-stream';
+      video.crossOrigin = 'anonymous';
+      video.playsInline = true;
+      video.setAttribute('playsinline', '');
+      video.setAttribute('webkit-playsinline', '');
+      video.preload = 'auto';
+      video.loop = false;
+      video.autoplay = false;
+      video.muted = false; // Audio habilitado por defecto tras el clic del usuario
+      video.volume = 1.0;
+
+      // CRÍTICO PARA META QUEST BROWSER / ANDROID CHROMIUM:
+      // Si el elemento <video> no está anexado al DOM, el pipeline MediaCodec
+      // no decodifica fotogramas para texturas WebGL externas ni avanza el stream.
+      video.style.position = 'fixed';
+      video.style.top = '0';
+      video.style.left = '0';
+      video.style.width = '1px';
+      video.style.height = '1px';
+      video.style.opacity = '0.001';
+      video.style.pointerEvents = 'none';
+      video.style.zIndex = '-99999';
+
+      if (!document.body.contains(video)) {
+        document.body.appendChild(video);
+      }
+    }
 
     video.addEventListener('ended', () => {
       console.info('[VideoManager] Video institucional finalizado.');
@@ -76,8 +97,9 @@ export class VideoManager {
   }
 
   /**
-   * Prepara el elemento de video en respuesta a una interacción del usuario,
+   * Prepara y activa la reproducción del video en respuesta a una interacción del usuario,
    * permitiendo sortear las restricciones de reproducción automática (autoplay) de los navegadores.
+   * Se ejecuta síncronamente dentro del evento click del usuario.
    */
   public prime(url?: string): void {
     this.hasUserInteracted = true;
@@ -87,11 +109,26 @@ export class VideoManager {
     const video = this.videoElement!;
     if (url) {
       const base = import.meta.env.BASE_URL || '/';
-      const resolvedUrl = url.startsWith('assets/') ? `${base}${url}` : url;
+      const cleanBase = base.endsWith('/') ? base : `${base}/`;
+      const resolvedUrl = url.startsWith('assets/') ? `${cleanBase}${url}` : url;
       if (video.src !== resolvedUrl && !video.src.endsWith(url)) {
         video.src = resolvedUrl;
         video.load();
       }
+    }
+
+    // Iniciar reproducción síncrona dentro del gesto del usuario
+    try {
+      const playPromise = video.play();
+      if (playPromise !== undefined) {
+        playPromise.catch((err) => {
+          console.warn('[VideoManager] Prime con audio bloqueado, activando modo silenciado temporal:', err);
+          video.muted = true;
+          video.play().catch((e) => console.warn('[VideoManager] Prime silenciado falló:', e));
+        });
+      }
+    } catch (e) {
+      console.warn('[VideoManager] Error en prime:', e);
     }
   }
 
@@ -101,39 +138,46 @@ export class VideoManager {
     }
     const video = this.videoElement!;
     const base = import.meta.env.BASE_URL || '/';
-    const resolvedUrl = url.startsWith('assets/') ? `${base}${url}` : url;
+    const cleanBase = base.endsWith('/') ? base : `${base}/`;
+    const resolvedUrl = url.startsWith('assets/') ? `${cleanBase}${url}` : url;
 
     if (video.src !== resolvedUrl && !video.src.endsWith(url)) {
       video.src = resolvedUrl;
       video.load();
     }
 
-    video.currentTime = 0;
-    video.volume = 1.0;
-
-    // Si el navegador bloquea autoplay con audio no silenciado, intentamos reproducir
-    try {
-      await video.play();
-      console.info('[VideoManager] Reproducción de video iniciada con audio.');
-    } catch (playError) {
-      console.warn('[VideoManager] Autoplay con audio bloqueado por el navegador; intentando modo silenciado temporal:', playError);
-      video.muted = true;
+    if (video.paused) {
       try {
         await video.play();
-        // Si el usuario ya interactuó, desmutear suavemente
-        if (this.hasUserInteracted) {
-          setTimeout(() => {
-            try {
-              video.muted = false;
-            } catch (e) {}
-          }, 300);
+        console.info('[VideoManager] Reproducción de video iniciada con audio.');
+      } catch (playError) {
+        console.warn('[VideoManager] Autoplay con audio bloqueado por el navegador; intentando modo silenciado temporal:', playError);
+        video.muted = true;
+        try {
+          await video.play();
+          console.info('[VideoManager] Reproducción iniciada en modo silenciado temporal.');
+        } catch (err) {
+          console.error('[VideoManager] No se pudo reproducir el video:', err);
         }
-      } catch (err) {
-        console.error('[VideoManager] No se pudo reproducir el video:', err);
       }
     }
 
     return video;
+  }
+
+  /**
+   * Reactiva el audio en caso de que el navegador haya requerido inicio silenciado.
+   */
+  public unmute(): void {
+    if (this.videoElement && this.videoElement.muted) {
+      try {
+        this.videoElement.muted = false;
+        this.videoElement.volume = 1.0;
+        console.info('[VideoManager] Audio desmutado con éxito.');
+      } catch (e) {
+        console.warn('[VideoManager] Error al desmutar audio:', e);
+      }
+    }
   }
 
   public pause(): void {

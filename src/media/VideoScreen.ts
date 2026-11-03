@@ -14,6 +14,7 @@ export class VideoScreen {
   private screenMaterial: THREE.MeshBasicMaterial;
   private videoTexture: THREE.VideoTexture | null = null;
   private standbyTexture: THREE.CanvasTexture;
+  private videoElement: HTMLVideoElement | null = null;
   private config: ExperienceConfigData;
 
   constructor(config: ExperienceConfigData) {
@@ -147,6 +148,7 @@ export class VideoScreen {
    * Conecta un elemento de video HTML5 a la superficie 3D mediante THREE.VideoTexture.
    */
   public attachVideo(video: HTMLVideoElement): void {
+    this.videoElement = video;
     if (this.videoTexture) {
       this.videoTexture.dispose();
       this.videoTexture = null;
@@ -164,9 +166,23 @@ export class VideoScreen {
   }
 
   /**
+   * Actualización continua por fotograma ejecutada en el bucle WebGL/WebXR.
+   * Resuelve el congelamiento o pantalla negra en Meta Quest Browser al forzar
+   * la subida de fotogramas a la GPU sin depender de requestVideoFrameCallback.
+   */
+  public update(): void {
+    if (this.videoTexture && this.videoElement) {
+      if (this.videoElement.readyState >= 2 && !this.videoElement.paused) {
+        this.videoTexture.needsUpdate = true;
+      }
+    }
+  }
+
+  /**
    * Libera la textura de video y restablece la imagen de standby.
    */
   public detachVideo(): void {
+    this.videoElement = null;
     if (this.videoTexture) {
       this.videoTexture.dispose();
       this.videoTexture = null;

@@ -99,6 +99,7 @@ export class ExperienceManager {
     // F. Loop de actualización continuo
     this.app.onUpdate((delta) => {
       this.unamScene.update(delta);
+      this.videoScreen.update();
     });
   }
 
@@ -111,10 +112,8 @@ export class ExperienceManager {
             if (this.currentState === ExperienceState.IDLE) this.startExperience();
             break;
           case 'SKIP_EXPLORATION':
-            if (this.currentState === ExperienceState.EXPLORATION) this.transitionToCinema();
-            break;
           case 'PLAY_VIDEO':
-            if (this.currentState === ExperienceState.EXPLORATION) this.transitionToCinema();
+            this.transitionToCinema();
             break;
           case 'SKIP_TO_OUTRO':
             if (this.currentState === ExperienceState.VIDEO_PLAYBACK) this.transitionToOutro();
@@ -141,6 +140,13 @@ export class ExperienceManager {
    * Maneja el impacto del rayo del mando Meta Quest en objetos 3D interactivos.
    */
   private handleControllerInteraction(controllerIndex: number): void {
+    // Si el navegador inició en modo silenciado por políticas de autoplay, cualquier gatillo/click en VR reactiva el audio
+    this.videoManager.unmute();
+    const vid = this.videoManager.getVideoElement();
+    if (vid && vid.paused && this.currentState === ExperienceState.VIDEO_PLAYBACK) {
+      vid.play().catch(() => {});
+    }
+
     if (this.currentState === ExperienceState.RESET_READY || this.currentState === ExperienceState.PC_PUMA_OUTRO) {
       const hits = this.app.raycastController(controllerIndex, [this.pcpumaOutro.restartButtonMesh], true);
       if (hits.length > 0) {
@@ -154,6 +160,7 @@ export class ExperienceManager {
    * Maneja el clic con ratón sobre el botón 3D en simulación Desktop.
    */
   private handlePointerInteraction(event: PointerEvent): void {
+    this.videoManager.unmute();
     if (this.currentState === ExperienceState.RESET_READY || this.currentState === ExperienceState.PC_PUMA_OUTRO) {
       const hits = this.app.raycastPointer(event, [this.pcpumaOutro.restartButtonMesh], true);
       if (hits.length > 0) {
@@ -203,13 +210,22 @@ export class ExperienceManager {
 
   /**
    * Inicia la experiencia inmersiva: solicita WebXR o continúa en Desktop.
+   * Presenta de inmediato el video institucional en la sala virtual.
    */
   public async startExperience(): Promise<void> {
     this.setState(ExperienceState.ENTER_XR);
+
+    // 1. Activar reproducción síncronamente durante el clic del usuario (autoplay permission)
     this.videoManager.prime(this.config.videoPath);
     this.welcomeScreen.hide();
 
-    // Intentar entrar en sesión WebXR inmersiva si el navegador lo soporta
+    // 2. Conectar de inmediato el elemento de video a la superficie 3D
+    const videoEl = this.videoManager.getVideoElement();
+    if (videoEl) {
+      this.videoScreen.attachVideo(videoEl);
+    }
+
+    // 3. Solicitar sesión WebXR inmersiva si el navegador lo soporta (Meta Quest)
     try {
       const isVRSupported = await this.app.session.checkVRSupport();
       if (isVRSupported && !this.app.session.isPresenting) {
@@ -219,45 +235,30 @@ export class ExperienceManager {
         console.info('[ExperienceManager] Sesión WebXR immersive-vr iniciada con éxito.');
       }
     } catch (err) {
-      console.info('[ExperienceManager] Modo Desktop o visor no conectado; continuando en simulación de escritorio:', err);
+      console.info('[ExperienceManager] Modo Desktop o visor no conectado; continuando en simulación:', err);
     }
 
-    // Centrar la cámara en el centro de la plaza de la Biblioteca Central
+    // 4. Centrar la cámara firmemente en el punto de spawn de la plaza peatonal
     this.app.resetCamera([0, 1.6, 6], [0, 2.5, -20]);
 
-    // Iniciar audio ambiental
+    // 5. Iniciar audio ambiental
     this.audioManager.startAmbient();
 
-    // Avanzar a la fase de exploración libre
-    this.startExploration();
+    // 6. Transicionar de inmediato a la sala de video cinematográfica (sin esperar 35 segundos)
+    await this.transitionToCinema();
   }
 
   /**
-   * Inicia directamente en la sala de video sin esperar la fase de exploración libre.
+   * Inicia directamente en la sala de video cinematográfica.
    */
   public async startExperienceDirectVideo(): Promise<void> {
-    this.videoManager.prime(this.config.videoPath);
-    this.welcomeScreen.hide();
-
-    try {
-      const isVRSupported = await this.app.session.checkVRSupport();
-      if (isVRSupported && !this.app.session.isPresenting) {
-        await this.app.session.enterVR({
-          optionalFeatures: ['local-floor', 'bounded-floor', 'hand-tracking'],
-        });
-      }
-    } catch (err) {}
-
-    this.app.resetCamera([0, 1.6, 6], [0, 2.5, -20]);
-    this.audioManager.startAmbient();
-
-    await this.transitionToCinema();
+    await this.startExperience();
   }
 
   /**
    * Fase de Exploración Libre 360° de Ciudad Universitaria.
    */
-  private startExploration(): void {
+  public startExploration(): void {
     this.setState(ExperienceState.EXPLORATION);
     this.unamScene.setCinemaMode(false);
 
@@ -289,33 +290,39 @@ export class ExperienceManager {
 
   /**
    * Transición cinematográfica hacia la pantalla de video 16:9.
+   * La pantalla se visualiza y reproduce de inmediato frente al usuario.
    */
   public async transitionToCinema(): Promise<void> {
     this.clearExplorationTimer();
     this.setState(ExperienceState.TRANSITION_TO_CINEMA);
 
-    // Ocultar HUD de exploración
+    // Ocultar HUD de exploración si estaba visible
     await this.experienceUI.hideHUD();
+
+    // Asegurar que el elemento de video esté conectado a la pantalla virtual
+    const videoEl = this.videoManager.getVideoElement();
+    if (videoEl) {
+      this.videoScreen.attachVideo(videoEl);
+    }
 
     // Chime y atenuación de luz diurna para enfoque en la pantalla
     this.audioManager.playTransitionChime();
     this.unamScene.setCinemaMode(true);
     this.audioManager.duckAmbient(true);
 
-    // Iniciar carga del video al tiempo que anima la entrada de la pantalla
+    // Iniciar carga/reproducción del video institucional
     const playPromise = this.videoManager.loadAndPlay(this.config.videoPath);
 
-    // Animación de entrada de la pantalla virtual 16:9
-    await this.videoScreen.animateIn(1.5);
+    // Animación de entrada fluida de la pantalla virtual 16:9
+    await this.videoScreen.animateIn(1.0);
 
     this.setState(ExperienceState.VIDEO_PLAYBACK);
 
     try {
-      const videoEl = await playPromise;
-      this.videoScreen.attachVideo(videoEl);
+      const activeVideoEl = await playPromise;
+      this.videoScreen.attachVideo(activeVideoEl);
     } catch (err) {
-      console.warn('[ExperienceManager] Error al reproducir video; avanzando a cierre:', err);
-      setTimeout(() => this.transitionToOutro(), 3000);
+      console.warn('[ExperienceManager] Error al reproducir video:', err);
     }
   }
 
