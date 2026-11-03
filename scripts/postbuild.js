@@ -1,4 +1,4 @@
-import { copyFileSync, mkdirSync, existsSync, readdirSync } from 'fs';
+import { copyFileSync, cpSync, mkdirSync, existsSync } from 'fs';
 import { resolve } from 'path';
 
 const rootDir = process.cwd();
@@ -36,19 +36,12 @@ if (existsSync(operadorHtml)) {
   console.log('[Postbuild] Rutas /operador y /operator sincronizadas exitosamente.');
 }
 
-// 4. Sincronizar bundles precompilados de dist/assets hacia assets/ en root
+// 4. Sincronizar bundles precompilados y recursos de dist/assets hacia assets/ en root
 // Garantiza funcionamiento inmediato si GitHub Pages está configurado en 'Deploy from branch main'
 const distAssetsDir = resolve(distDir, 'assets');
 const rootAssetsDir = resolve(rootDir, 'assets');
 if (existsSync(distAssetsDir)) {
   mkdirSync(rootAssetsDir, { recursive: true });
-  const files = readdirSync(distAssetsDir);
-  for (const f of files) {
-    const srcFile = resolve(distAssetsDir, f);
-    const destFile = resolve(rootAssetsDir, f);
-    try {
-      copyFileSync(srcFile, destFile);
-    } catch (e) {}
-  }
-  console.log('[Postbuild] Bundles sincronizados a assets/ en root para compatibilidad total con GitHub Pages.');
+  cpSync(distAssetsDir, rootAssetsDir, { recursive: true });
+  console.log('[Postbuild] Bundles y assets sincronizados a assets/ en root para compatibilidad total con GitHub Pages.');
 }
