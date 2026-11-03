@@ -15,41 +15,36 @@ export class Environment {
     this.group.name = 'VXR_UNAM_Environment';
 
     // 1. Domo de cielo azul con gradiente diurno luminoso (Ciudad Universitaria, 2,240m)
-    const skyGeo = new THREE.SphereGeometry(300, 32, 24);
-    const skyMat = new THREE.ShaderMaterial({
+    // Generado con CanvasTexture de alto rendimiento para garantizar 100% compatibilidad sin fallos de compilación GLSL
+    const canvas = document.createElement('canvas');
+    canvas.width = 16;
+    canvas.height = 512;
+    const ctx = canvas.getContext('2d')!;
+    const grad = ctx.createLinearGradient(0, 0, 0, 512);
+    grad.addColorStop(0.0, '#1565c0');  // Azul cielo intenso en cénit
+    grad.addColorStop(0.35, '#1e88e5'); // Azul cielo luminoso
+    grad.addColorStop(0.7, '#64b5f6');  // Azul celeste hacia el horizonte
+    grad.addColorStop(0.92, '#bbdefb'); // Azul pastel en la línea de horizonte
+    grad.addColorStop(1.0, '#e3f2fd');  // Bruma suave del horizonte
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 16, 512);
+
+    const skyTexture = new THREE.CanvasTexture(canvas);
+    skyTexture.colorSpace = THREE.SRGBColorSpace;
+    skyTexture.minFilter = THREE.LinearFilter;
+    skyTexture.magFilter = THREE.LinearFilter;
+    skyTexture.wrapS = THREE.ClampToEdgeWrapping;
+    skyTexture.wrapT = THREE.ClampToEdgeWrapping;
+
+    const skyGeo = new THREE.SphereGeometry(300, 32, 16);
+    const skyMat = new THREE.MeshBasicMaterial({
+      map: skyTexture,
       side: THREE.BackSide,
       depthWrite: false,
-      uniforms: {
-        topColor: { value: new THREE.Color(0x1e88e5) },     // Azul cielo azul intenso en cénit
-        horizonColor: { value: new THREE.Color(0xd9ecfd) }, // Horizonte azul celeste claro luminoso
-        bottomColor: { value: new THREE.Color(0x90caf9) },  // Tono base suave
-        offset: { value: 15.0 },
-        exponent: { value: 0.6 },
-      },
-      vertexShader: `
-        varying vec3 vWorldPosition;
-        void main() {
-          vec4 worldPosition = modelMatrix * vec4(position, 1.0);
-          vWorldPosition = worldPosition.xyz;
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-        }
-      `,
-      fragmentShader: `
-        uniform vec3 topColor;
-        uniform vec3 horizonColor;
-        uniform vec3 bottomColor;
-        uniform float offset;
-        uniform float exponent;
-        varying vec3 vWorldPosition;
-        void main() {
-          float h = normalize(vWorldPosition + offset).y;
-          vec3 sky = mix(horizonColor, topColor, max(pow(max(h, 0.0), exponent), 0.0));
-          vec3 ground = mix(horizonColor, bottomColor, max(pow(max(-h, 0.0), exponent), 0.0));
-          gl_FragColor = vec4(h > 0.0 ? sky : ground, 1.0);
-        }
-      `,
+      fog: false,
     });
     this.skyMesh = new THREE.Mesh(skyGeo, skyMat);
+    this.skyMesh.name = 'Daytime_Sky_Dome';
     this.group.add(this.skyMesh);
 
     // 2. Silueta de montañas distantes (Ajusco y serranía del sur del Valle de México)
