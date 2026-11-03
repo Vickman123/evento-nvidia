@@ -40,11 +40,12 @@ async function bootstrap() {
     }
   );
 
-  // Desactivar controles de ratón cuando se entre a WebXR inmersivo
+  // Desactivar controles de ratón y anclar al spawn point exacto cuando se entre a WebXR inmersivo
   app.session.onStateChange((isVR) => {
     observerControls.enabled = !isVR;
     if (isVR) {
       observerControls.resetToCenter();
+      app.lockVRToSpawn([0, 1.6, 6]);
     }
   });
 
@@ -62,7 +63,13 @@ async function bootstrap() {
   // 5. Bucle de actualización continuo
   let lastSyncTime = 0;
   app.onUpdate((delta) => {
-    observerControls.update(delta);
+    if (!app.session.isPresenting) {
+      observerControls.update(delta);
+    } else {
+      // En Meta Quest (WebXR), anclamos firmemente en el punto de spawn de la plaza (0, 1.6, 6)
+      // Bloqueando todo desplazamiento físico o de joystick, y permitiendo rotación 360° libre de la cabeza.
+      app.lockVRToSpawn([0, 1.6, 6]);
+    }
 
     const stats = performanceMonitor.update();
     const now = performance.now();

@@ -64,6 +64,9 @@ export class XRApp {
   /** Active runtime strategy (DesktopRuntime or WebXRRuntime) */
   public readonly runtime: XRRuntime;
 
+  /** Camera rig group anchoring the viewer and controllers firmly in WebXR */
+  public readonly cameraRig: THREE.Group;
+
   /** Initial camera position for reset */
   private initialCameraPosition: [number, number, number];
 
@@ -120,11 +123,15 @@ export class XRApp {
       });
     }
 
-    // 3. Attach WebXR controllers to scene so laser rays render automatically
-    this.scene.nativeScene.add(this.session.controllerGroup);
+    // 3. Attach WebXR controllers and camera to cameraRig so spawn anchoring is synchronized
+    this.cameraRig = new THREE.Group();
+    this.cameraRig.name = 'VXR_CameraRig';
+    this.cameraRig.add(this.renderer.camera);
+    this.cameraRig.add(this.session.controllerGroup);
+    this.scene.nativeScene.add(this.cameraRig);
 
     // 4. Store initial camera transforms
-    this.initialCameraPosition = options.cameraPosition ?? [0, 1.6, 3.5];
+    this.initialCameraPosition = options.cameraPosition ?? [0, 1.6, 6];
 
     // 5. Setup desktop OrbitControls if enabled
     if (options.autoOrbitControls !== false) {
@@ -148,10 +155,14 @@ export class XRApp {
       this.session.createVRButton(this.renderer.container);
     }
 
-    // 7. Disable orbit controls during active VR sessions to avoid conflicts
+    // 7. Disable orbit controls during active VR sessions to avoid conflicts and restore rig on exit
     this.session.onStateChange((isVR) => {
       if (this.controls) {
         this.controls.enabled = !isVR;
+      }
+      if (!isVR) {
+        this.cameraRig.position.set(0, 0, 0);
+        this.cameraRig.updateMatrixWorld(true);
       }
     });
 
@@ -207,6 +218,22 @@ export class XRApp {
   }
 
   /**
+   * Locks WebXR viewer strictly to the specified spawn point, counteracting physical room translation,
+   * while preserving full 360° rotational freedom for looking around.
+   */
+  public lockVRToSpawn(spawnPosition: [number, number, number] = [0, 1.6, 6]): void {
+    if (!this.session.isPresenting) return;
+
+    // Headset translation compensation:
+    // Ensures final world coordinates are exactly (spawnPosition[0], spawnPosition[1], spawnPosition[2])
+    const cam = this.renderer.camera;
+    this.cameraRig.position.x = spawnPosition[0] - cam.position.x;
+    this.cameraRig.position.y = spawnPosition[1] - cam.position.y;
+    this.cameraRig.position.z = spawnPosition[2] - cam.position.z;
+    this.cameraRig.updateMatrixWorld(true);
+  }
+
+  /**
    * Resets camera and orbit target to default coordinates or specific target.
    */
   public resetCamera(
@@ -216,12 +243,16 @@ export class XRApp {
     const pos = targetPosition ?? this.initialCameraPosition;
     const look = targetLookAt ?? this.initialCameraTarget;
 
-    this.renderer.camera.position.set(pos[0], pos[1], pos[2]);
-    if (this.controls) {
-      this.controls.target.set(look[0], look[1], look[2]);
-      this.controls.update();
+    if (this.session.isPresenting) {
+      this.lockVRToSpawn(pos);
     } else {
-      this.renderer.camera.lookAt(look[0], look[1], look[2]);
+      this.renderer.camera.position.set(pos[0], pos[1], pos[2]);
+      if (this.controls) {
+        this.controls.target.set(look[0], look[1], look[2]);
+        this.controls.update();
+      } else {
+        this.renderer.camera.lookAt(look[0], look[1], look[2]);
+      }
     }
   }
 
@@ -325,8 +356,11 @@ export class XRApp {
       // 2. Delegate frame update to runtime
       this.runtime.update(delta, elapsed);
 
-      // Update OrbitControls on desktop
-      if (this.controls && this.controls.enabled) {
+      // 3. In WebXR (Meta Quest), anchor viewer strictly to plaza center spawn point (0, 1.6, 6)
+      if (this.session.isPresenting) {
+        this.lockVRToSpawn([0, 1.6, 6]);
+      } else if (this.controls && this.controls.enabled) {
+        // Update OrbitControls on desktop
         this.controls.update();
       }
 

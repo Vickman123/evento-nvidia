@@ -634,6 +634,13 @@ export class XRInput {
         cleanY = (stickY / mag) * normalizedMag;
       }
 
+      // En modo WebXR para el stand institucional UNAM, bloqueamos la traslación y giro por joystick
+      // para evitar traslaciones no deseadas; el visitante únicamente gira y visualiza libremente con su cabeza.
+      if (this.xrSession?.isPresenting) {
+        this.vectorStates.set('move', { x: 0, y: 0 });
+        continue;
+      }
+
       // Left hand controls locomotion ('move')
       if (handedness === 'left' || (handedness === 'none' && i === 1)) {
         if (Math.hypot(cleanX, cleanY) > 0) {
