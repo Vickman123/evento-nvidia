@@ -78,6 +78,17 @@
       background: #10B981;
     }
   </style>
+
+  <!-- En GitHub Pages carga de inmediato el bundle JavaScript precompilado; en local Vite transpila TypeScript -->
+  <script type="module">
+    if (window.location.hostname.endsWith('github.io')) {
+      const s = document.createElement('script');
+      s.type = 'module';
+      s.crossOrigin = 'anonymous';
+      s.src = './assets/main.js';
+      document.head.appendChild(s);
+    }
+  </script>
 </head>
 <body>
   <div id="app"></div>

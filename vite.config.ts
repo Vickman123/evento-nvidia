@@ -28,6 +28,11 @@ export default defineConfig(({ mode }) => {
           operador: resolve(__dirname, 'operador/index.html'),
           generator: resolve(__dirname, 'generator.html'),
         },
+        output: {
+          entryFileNames: 'assets/[name].js',
+          chunkFileNames: 'assets/[name].js',
+          assetFileNames: 'assets/[name].[ext]',
+        },
       },
     },
   };
