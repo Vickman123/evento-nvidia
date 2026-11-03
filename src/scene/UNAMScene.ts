@@ -37,7 +37,8 @@ export class UNAMScene {
     this.vegetation = new Vegetation();
     this.lighting = new Lighting();
 
-    // 2. Montar en el grafo (el Diorama es la pieza central)
+    // 2. Montar en el grafo (cielo diurno, diorama central e iluminación PBR)
+    this.group.add(this.environment.group);
     this.group.add(this.diorama.group);
     this.group.add(this.lighting.group);
 
@@ -50,9 +51,9 @@ export class UNAMScene {
     // 3. Añadir a la escena nativa de VXR Core
     this.app.scene.nativeScene.add(this.group);
 
-    // 4. Configurar atmósfera y niebla profunda de exposición arquitectónica
-    this.app.scene.setBackground(0x0c1420);
-    this.app.scene.setFog(0x0c1420, 50, 180);
+    // 4. Configurar atmósfera diurna luminosa con cielo azul y horizonte suave
+    this.app.scene.setBackground(0x4a96e6);
+    this.app.scene.setFog(0xd4e9fb, 120, 380);
 
     // 5. Cargar modelo complementario si está disponible
     this.tryLoadExternalModels();
