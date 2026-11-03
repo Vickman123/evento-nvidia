@@ -1,5 +1,6 @@
 import { XRApp } from './vxr/XRApp.js';
 import { ExperienceManager } from './experience/ExperienceManager.js';
+import { ExperienceState } from './experience/ExperienceStates.js';
 import { PerformanceMonitor } from './utils/PerformanceMonitor.js';
 import { ObserverControls } from './vxr/camera/ObserverControls.js';
 
@@ -47,16 +48,16 @@ async function bootstrap() {
     }
   });
 
-  // 3. Crear barra flotante de selección de vista (Centro vs Maqueta Aérea)
-  createViewModeUI(observerControls);
-
-  // 4. Instanciar el gestor de experiencia y máquina de estados
+  // 3. Instanciar el gestor de experiencia y máquina de estados
   const experienceManager = new ExperienceManager(app);
   const performanceMonitor = new PerformanceMonitor(app);
 
   (window as any).__UNAM_EXPERIENCE__ = experienceManager;
   (window as any).__VXR_APP__ = app;
   (window as any).__OBSERVER_CONTROLS__ = observerControls;
+
+  // 4. Crear barra flotante de selección de vista y reproducción de video
+  createViewModeUI(observerControls, experienceManager);
 
   // 5. Bucle de actualización continuo
   let lastSyncTime = 0;
@@ -86,7 +87,7 @@ async function bootstrap() {
 /**
  * Crea una interfaz flotante y elegante para alternar entre la vista peatonal en el centro y la vista maqueta aérea
  */
-function createViewModeUI(controls: ObserverControls): void {
+function createViewModeUI(controls: ObserverControls, exp: ExperienceManager): void {
   const container = document.createElement('div');
   container.id = 'vxr-view-mode-bar';
   container.style.position = 'fixed';
@@ -111,6 +112,12 @@ function createViewModeUI(controls: ObserverControls): void {
   btnMaqueta.textContent = '📐 Vista Maqueta (Aérea)';
   styleButton(btnMaqueta, false);
 
+  const btnVideo = document.createElement('button');
+  btnVideo.textContent = '🎬 Ver Video Institucional';
+  styleButton(btnVideo, false);
+  btnVideo.style.borderColor = 'rgba(0, 240, 255, 0.4)';
+  btnVideo.style.color = '#38bdf8';
+
   btnGround.addEventListener('click', () => {
     controls.setMode('ground');
     styleButton(btnGround, true);
@@ -123,8 +130,19 @@ function createViewModeUI(controls: ObserverControls): void {
     styleButton(btnMaqueta, true);
   });
 
+  btnVideo.addEventListener('click', () => {
+    controls.setMode('ground');
+    styleButton(btnGround, true);
+    styleButton(btnMaqueta, false);
+    if (exp.currentState === ExperienceState.IDLE) {
+      exp.startExperience();
+    }
+    exp.transitionToCinema();
+  });
+
   container.appendChild(btnGround);
   container.appendChild(btnMaqueta);
+  container.appendChild(btnVideo);
   document.body.appendChild(container);
 }
 

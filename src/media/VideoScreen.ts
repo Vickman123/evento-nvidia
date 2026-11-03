@@ -29,41 +29,24 @@ export class VideoScreen {
     // 1. Textura inicial de espera / standby institucional
     this.standbyTexture = this.createStandbyTexture();
 
-    // 2. Malla de la pantalla (16:9, plana o sutilmente curva para inmersión VR)
-    const isCurved = config.videoScreenMode === 'curved';
+    // 2. Malla de la pantalla (16:9 cinematográfica, nítida y sin recorte)
     const width = config.videoScreenWidth;
     const height = config.videoScreenHeight;
-    const curveRadius = 6.0;
 
-    const screenGeo = isCurved
-      ? new THREE.CylinderGeometry(
-          curveRadius,
-          curveRadius,
-          height,
-          48,
-          1,
-          true,
-          -width / (2 * curveRadius) + Math.PI / 2,
-          width / curveRadius
-        )
-      : new THREE.PlaneGeometry(width, height);
-
-    // Ajustar orientación si es cilíndrica
-    if (isCurved) {
-      screenGeo.rotateY(Math.PI);
-    }
+    const screenGeo = new THREE.PlaneGeometry(width, height);
 
     this.screenMaterial = new THREE.MeshBasicMaterial({
       map: this.standbyTexture,
-      side: THREE.FrontSide,
-      transparent: true,
-      opacity: 0.99,
+      side: THREE.DoubleSide,
+      transparent: false,
+      opacity: 1.0,
     });
     this.screenMesh = new THREE.Mesh(screenGeo, this.screenMaterial);
     this.screenMesh.name = 'Screen_Display_Surface';
+    this.screenMesh.position.set(0, 0, 0.01);
     this.group.add(this.screenMesh);
 
-    // 3. Marco arquitectónico institucional (Azul UNAM con ribete dorado)
+    // 3. Marco arquitectónico institucional (Azul UNAM con ribete dorado detrás de la pantalla)
     const frameDepth = 0.12;
     const frameGeo = new THREE.BoxGeometry(width + 0.28, height + 0.28, frameDepth);
     const frameMat = new THREE.MeshStandardMaterial({
@@ -72,7 +55,7 @@ export class VideoScreen {
       metalness: 0.7,
     });
     this.frameMesh = new THREE.Mesh(frameGeo, frameMat);
-    this.frameMesh.position.z = -0.07;
+    this.frameMesh.position.set(0, 0, -frameDepth / 2);
     this.group.add(this.frameMesh);
 
     // Ribete dorado perimetral luminoso
@@ -82,7 +65,7 @@ export class VideoScreen {
       linewidth: 2,
     });
     const edgesMesh = new THREE.LineSegments(edgesGeo, edgesMat);
-    edgesMesh.position.z = -0.06;
+    edgesMesh.position.set(0, 0, 0.005);
     this.group.add(edgesMesh);
 
     // Rótulo inferior integrado en el marco
@@ -176,6 +159,7 @@ export class VideoScreen {
     this.videoTexture.colorSpace = THREE.SRGBColorSpace;
 
     this.screenMaterial.map = this.videoTexture;
+    this.screenMaterial.side = THREE.DoubleSide;
     this.screenMaterial.needsUpdate = true;
   }
 
@@ -188,6 +172,7 @@ export class VideoScreen {
       this.videoTexture = null;
     }
     this.screenMaterial.map = this.standbyTexture;
+    this.screenMaterial.side = THREE.DoubleSide;
     this.screenMaterial.needsUpdate = true;
   }
 
@@ -200,6 +185,8 @@ export class VideoScreen {
       gsap.killTweensOf(this.group.scale);
       gsap.killTweensOf(this.group.position);
 
+      const targetZ = 6 - this.config.videoScreenDistance;
+      this.group.position.z = targetZ;
       this.group.scale.set(0.1, 0.1, 0.1);
       this.group.position.y = this.config.videoScreenHeightAboveGround - 0.5;
 
@@ -244,7 +231,8 @@ export class VideoScreen {
     gsap.killTweensOf(this.group.scale);
     gsap.killTweensOf(this.group.position);
     this.group.scale.set(0.001, 0.001, 0.001);
-    this.group.position.set(0, this.config.videoScreenHeightAboveGround, -this.config.videoScreenDistance);
+    const targetZ = 6 - this.config.videoScreenDistance;
+    this.group.position.set(0, this.config.videoScreenHeightAboveGround, targetZ);
     this.group.visible = false;
     this.detachVideo();
   }

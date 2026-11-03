@@ -23,6 +23,7 @@ export class UNAMScene {
   private app: XRApp;
   private externalBuildingGroup: THREE.Group | null = null;
   private aiSlotObjects: Map<string, THREE.Object3D> = new Map();
+  private dioramaModelGroup: THREE.Group | null = null;
 
   constructor(app: XRApp) {
     this.app = app;
@@ -58,9 +59,32 @@ export class UNAMScene {
   }
 
   /**
-   * Intenta cargar el modelo GLB institucional de Filológicas o complementos sin bloquear.
+   * Intenta cargar el modelo GLB de alta fidelidad o complementos sin bloquear.
    */
   private async tryLoadExternalModels(): Promise<void> {
+    // 0. Cargar el Diorama 3D empacado de alta fidelidad (agentic_0002_pack_glb_model-2.glb)
+    try {
+      const dioramaModel = await this.app.loadModel('assets/models/unam_biblioteca_diorama.glb', {
+        autoGround: false,
+        autoCenter: false,
+      });
+
+      if (dioramaModel && dioramaModel.group) {
+        dioramaModel.group.name = 'VXR_Pack_Biblioteca_Diorama';
+        dioramaModel.group.position.set(0, -1.1, -10);
+        this.dioramaModelGroup = dioramaModel.group;
+        this.group.add(dioramaModel.group);
+
+        // Ocultar la versión procedural para dar protagonismo total al modelo 3D optimizado
+        this.diorama.group.visible = false;
+        console.info('[UNAMScene] Modelo GLB Diorama (agentic_0002_pack_glb_model-2.glb) cargado exitosamente.');
+        return;
+      }
+    } catch (e) {
+      console.warn('[UNAMScene] Modelo GLB de diorama no disponible, recurriendo a diorama procedural.', e);
+      this.diorama.group.visible = true;
+    }
+
     try {
       const model = await this.app.loadModel('assets/models/Filologicas.glb', {
         autoGround: true,
@@ -256,6 +280,12 @@ export class UNAMScene {
     this.architecture.dispose();
     this.vegetation.dispose();
     this.lighting.dispose();
+
+    if (this.dioramaModelGroup) {
+      this.group.remove(this.dioramaModelGroup);
+      this.app.assets.disposeObject(this.dioramaModelGroup);
+      this.dioramaModelGroup = null;
+    }
 
     this.aiSlotObjects.forEach((obj) => {
       this.group.remove(obj);

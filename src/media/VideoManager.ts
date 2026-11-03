@@ -33,10 +33,13 @@ export class VideoManager {
     const video = document.createElement('video');
     video.crossOrigin = 'anonymous';
     video.playsInline = true;
+    video.setAttribute('playsinline', '');
+    video.setAttribute('webkit-playsinline', '');
     video.preload = 'auto';
     video.loop = false;
     video.autoplay = false;
     video.muted = false; // Audio habilitado tras el click del usuario en "INICIAR EXPERIENCIA"
+    video.volume = 1.0;
 
     video.addEventListener('ended', () => {
       console.info('[VideoManager] Video institucional finalizado.');
@@ -72,6 +75,22 @@ export class VideoManager {
     this.hasUserInteracted = interacted;
   }
 
+  /**
+   * Prepara el elemento de video en respuesta a una interacción del usuario,
+   * permitiendo sortear las restricciones de reproducción automática (autoplay) de los navegadores.
+   */
+  public prime(url?: string): void {
+    this.hasUserInteracted = true;
+    if (!this.videoElement) {
+      this.createVideoElement();
+    }
+    const video = this.videoElement!;
+    if (url && video.src !== url && !video.src.endsWith(url)) {
+      video.src = url;
+      video.load();
+    }
+  }
+
   public async loadAndPlay(url: string): Promise<HTMLVideoElement> {
     if (!this.videoElement) {
       this.createVideoElement();
@@ -84,6 +103,7 @@ export class VideoManager {
     }
 
     video.currentTime = 0;
+    video.volume = 1.0;
 
     // Si el navegador bloquea autoplay con audio no silenciado, intentamos reproducir
     try {
@@ -94,9 +114,13 @@ export class VideoManager {
       video.muted = true;
       try {
         await video.play();
-        // Si el usuario ya interactuó, desmutear inmediatamente
+        // Si el usuario ya interactuó, desmutear suavemente
         if (this.hasUserInteracted) {
-          setTimeout(() => { video.muted = false; }, 300);
+          setTimeout(() => {
+            try {
+              video.muted = false;
+            } catch (e) {}
+          }, 300);
         }
       } catch (err) {
         console.error('[VideoManager] No se pudo reproducir el video:', err);

@@ -7,6 +7,7 @@
 export class WelcomeScreen {
   private container: HTMLElement;
   private onStartCallback: (() => void) | null = null;
+  private onDirectVideoCallback: (() => void) | null = null;
   private isVisible: boolean = true;
 
   constructor() {
@@ -61,27 +62,50 @@ export class WelcomeScreen {
           Bienvenido a una nueva experiencia de aprendizaje inmersivo. Explora Ciudad Universitaria en 360° y descubre cómo la tecnología transforma la educación universitaria.
         </p>
 
-        <!-- Botón Principal de Inicio -->
-        <button id="btn-start-experience" style="
-          background: linear-gradient(135deg, #002B7A 0%, #0284C7 100%);
-          color: #FFFFFF;
-          border: 1px solid #38BDF8;
-          border-radius: 9999px;
-          padding: 18px 48px;
-          font-size: 17px;
-          font-weight: 700;
-          letter-spacing: 0.06em;
-          text-transform: uppercase;
-          cursor: pointer;
-          box-shadow: 0 12px 32px -4px rgba(14, 165, 233, 0.5);
-          transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-          outline: none;
-          display: flex;
-          align-items: center;
-          gap: 12px;
-        ">
-          <span>🥽 INICIAR EXPERIENCIA</span>
-        </button>
+        <!-- Botones de Acción -->
+        <div style="display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; align-items: center;">
+          <button id="btn-start-experience" style="
+            background: linear-gradient(135deg, #002B7A 0%, #0284C7 100%);
+            color: #FFFFFF;
+            border: 1px solid #38BDF8;
+            border-radius: 9999px;
+            padding: 16px 36px;
+            font-size: 16px;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            cursor: pointer;
+            box-shadow: 0 12px 32px -4px rgba(14, 165, 233, 0.5);
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            outline: none;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+          ">
+            <span>🥽 EXPLORAR ENTORNO 360°</span>
+          </button>
+
+          <button id="btn-direct-video" style="
+            background: linear-gradient(135deg, #d4af37 0%, #b8860b 100%);
+            color: #070e1a;
+            border: 1px solid #ffd700;
+            border-radius: 9999px;
+            padding: 16px 36px;
+            font-size: 16px;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            cursor: pointer;
+            box-shadow: 0 12px 32px -4px rgba(212, 175, 55, 0.5);
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            outline: none;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+          ">
+            <span>🎬 VER VIDEO INSTITUCIONAL</span>
+          </button>
+        </div>
 
         <!-- Indicador de compatibilidad Meta Quest -->
         <div style="margin-top: 32px; font-size: 12px; color: #64748B; display: flex; align-items: center; gap: 8px;">
@@ -108,11 +132,33 @@ export class WelcomeScreen {
       }
     });
 
+    const videoBtn = wrap.querySelector('#btn-direct-video') as HTMLButtonElement;
+    if (videoBtn) {
+      videoBtn.addEventListener('mouseenter', () => {
+        videoBtn.style.transform = 'scale(1.05)';
+        videoBtn.style.boxShadow = '0 16px 40px -4px rgba(212, 175, 55, 0.7)';
+      });
+      videoBtn.addEventListener('mouseleave', () => {
+        videoBtn.style.transform = 'scale(1.0)';
+        videoBtn.style.boxShadow = '0 12px 32px -4px rgba(212, 175, 55, 0.5)';
+      });
+      videoBtn.addEventListener('click', () => {
+        this.hide();
+        if (this.onDirectVideoCallback) {
+          this.onDirectVideoCallback();
+        }
+      });
+    }
+
     return wrap;
   }
 
   public onStart(callback: () => void): void {
     this.onStartCallback = callback;
+  }
+
+  public onDirectVideo(callback: () => void): void {
+    this.onDirectVideoCallback = callback;
   }
 
   public show(): void {

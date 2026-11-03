@@ -68,6 +68,10 @@ export class ExperienceManager {
       this.startExperience();
     });
 
+    this.welcomeScreen.onDirectVideo(() => {
+      this.startExperienceDirectVideo();
+    });
+
     // B. Botón 3D "VOLVER A COMENZAR" al final de la experiencia
     this.pcpumaOutro.onRestart(() => {
       this.resetExperience();
@@ -202,7 +206,7 @@ export class ExperienceManager {
    */
   public async startExperience(): Promise<void> {
     this.setState(ExperienceState.ENTER_XR);
-    this.videoManager.setUserInteracted(true);
+    this.videoManager.prime(this.config.videoPath);
     this.welcomeScreen.hide();
 
     // Intentar entrar en sesión WebXR inmersiva si el navegador lo soporta
@@ -226,6 +230,28 @@ export class ExperienceManager {
 
     // Avanzar a la fase de exploración libre
     this.startExploration();
+  }
+
+  /**
+   * Inicia directamente en la sala de video sin esperar la fase de exploración libre.
+   */
+  public async startExperienceDirectVideo(): Promise<void> {
+    this.videoManager.prime(this.config.videoPath);
+    this.welcomeScreen.hide();
+
+    try {
+      const isVRSupported = await this.app.session.checkVRSupport();
+      if (isVRSupported && !this.app.session.isPresenting) {
+        await this.app.session.enterVR({
+          optionalFeatures: ['local-floor', 'bounded-floor', 'hand-tracking'],
+        });
+      }
+    } catch (err) {}
+
+    this.app.resetCamera([0, 1.6, 6], [0, 2.5, -20]);
+    this.audioManager.startAmbient();
+
+    await this.transitionToCinema();
   }
 
   /**
@@ -276,21 +302,16 @@ export class ExperienceManager {
     this.unamScene.setCinemaMode(true);
     this.audioManager.duckAmbient(true);
 
+    // Iniciar carga del video al tiempo que anima la entrada de la pantalla
+    const playPromise = this.videoManager.loadAndPlay(this.config.videoPath);
+
     // Animación de entrada de la pantalla virtual 16:9
-    await this.videoScreen.animateIn(2.0);
+    await this.videoScreen.animateIn(1.5);
 
-    // Iniciar reproducción de video
-    this.startVideoPlayback();
-  }
-
-  /**
-   * Reproducción del video institucional local.
-   */
-  private async startVideoPlayback(): Promise<void> {
     this.setState(ExperienceState.VIDEO_PLAYBACK);
 
     try {
-      const videoEl = await this.videoManager.loadAndPlay(this.config.videoPath);
+      const videoEl = await playPromise;
       this.videoScreen.attachVideo(videoEl);
     } catch (err) {
       console.warn('[ExperienceManager] Error al reproducir video; avanzando a cierre:', err);

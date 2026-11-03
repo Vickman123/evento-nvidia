@@ -45,11 +45,11 @@ export const DEFAULT_CONFIG: ExperienceConfigData = {
   outroDuration: 10,       // 10 segundos para contemplar PC PUMA
   autoResetDuration: 10,   // 10 segundos de cuenta regresiva para el siguiente asistente
   videoPath: 'assets/videos/video-institucional.mp4',
-  videoScreenMode: 'curved',
-  videoScreenWidth: 4.8,
-  videoScreenHeight: 2.7,
-  videoScreenDistance: 4.2,
-  videoScreenHeightAboveGround: 2.0,
+  videoScreenMode: 'standard',
+  videoScreenWidth: 5.33,
+  videoScreenHeight: 3.0,
+  videoScreenDistance: 3.8,
+  videoScreenHeightAboveGround: 2.1,
   ambientAudioEnabled: true,
   ambientVolume: 0.35,
   videoVolume: 1.0,
