@@ -103,14 +103,14 @@ export class ExperienceManager {
       if (this.vrAlignmentFrames > 0) {
         this.vrAlignmentFrames--;
         if (this.currentState === ExperienceState.TRANSITION_TO_CINEMA || this.currentState === ExperienceState.VIDEO_PLAYBACK) {
-          this.videoScreen.placeInFrontOf(this.app, 3.6, 0.2);
+          this.videoScreen.placeInFrontOf(this.app, 3.5, 0.15);
         }
       }
       this.videoScreen.update();
     });
   }
 
-  public requestVRAlignment(frames: number = 10): void {
+  public requestVRAlignment(frames: number = 180): void {
     this.vrAlignmentFrames = frames;
   }
 
@@ -160,7 +160,7 @@ export class ExperienceManager {
 
     // Recentrar la pantalla de video frente a la mirada si el usuario presiona el gatillo en VR
     if (this.currentState === ExperienceState.VIDEO_PLAYBACK) {
-      this.videoScreen.placeInFrontOf(this.app, 3.6, 0.2);
+      this.videoScreen.placeInFrontOf(this.app, 3.5, 0.15);
     }
 
     if (this.currentState === ExperienceState.RESET_READY || this.currentState === ExperienceState.PC_PUMA_OUTRO) {
@@ -315,9 +315,9 @@ export class ExperienceManager {
     // Ocultar HUD de exploración
     this.experienceUI.hideHUD();
 
-    // Posicionar la pantalla exactamente frente a la mirada del usuario (3.6m a nivel de ojos)
-    this.videoScreen.placeInFrontOf(this.app, 3.6, 0.2);
-    this.requestVRAlignment(10);
+    // Posicionar la pantalla exactamente frente a la mirada del usuario a la distancia cinematográfica perfecta
+    this.videoScreen.placeInFrontOf(this.app, 3.5, 0.15);
+    this.requestVRAlignment(180); // 180 fotogramas = 2.5s continuos de alineación para que aparezca perfecta desde el inicio
 
     // Asegurar que el elemento de video esté conectado a la pantalla virtual de inmediato
     const videoEl = this.videoManager.getVideoElement();
@@ -337,6 +337,7 @@ export class ExperienceManager {
     this.videoScreen.animateIn(0.6);
 
     this.setState(ExperienceState.VIDEO_PLAYBACK);
+    this.requestVRAlignment(180);
 
     try {
       const activeVideoEl = await playPromise;

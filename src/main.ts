@@ -55,9 +55,9 @@ async function bootstrap() {
     if (isVR) {
       observerControls.resetToCenter();
       app.lockVRToSpawn([0, 1.6, 6]);
-      // Alinear la pantalla virtual justo frente a la mirada del usuario en VR
-      experienceManager.videoScreen.placeInFrontOf(app, 3.6, 0.2);
-      experienceManager.requestVRAlignment(15);
+      // Alinear la pantalla virtual justo frente a la mirada del usuario en VR a distancia óptima
+      experienceManager.videoScreen.placeInFrontOf(app, 3.5, 0.15);
+      experienceManager.requestVRAlignment(180);
       // Si el usuario entra en WebXR desde Meta Quest Browser estando en IDLE,
       // arrancar automáticamente la experiencia y el video institucional
       if (experienceManager.currentState === ExperienceState.IDLE) {

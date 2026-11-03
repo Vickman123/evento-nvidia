@@ -205,7 +205,7 @@ export class VideoScreen {
    * orientándola perpendicularmente para una visualización 100% nítida, cómoda y cinematográfica.
    * Acepta un XRApp (para consultar app.activeCamera en WebXR) o un THREE.Camera.
    */
-  public placeInFrontOf(cameraOrApp: THREE.Camera | { activeCamera: THREE.Camera }, distance: number = 3.6, heightOffset: number = 0.2): void {
+  public placeInFrontOf(cameraOrApp: THREE.Camera | { activeCamera: THREE.Camera }, distance: number = 3.5, heightOffset: number = 0.15): void {
     this.group.visible = true;
     this.group.scale.set(1, 1, 1);
 
@@ -224,7 +224,7 @@ export class VideoScreen {
     }
 
     const screenPos = camWorldPos.clone().add(camWorldDir.clone().multiplyScalar(distance));
-    screenPos.y = Math.max(1.5, camWorldPos.y + heightOffset);
+    screenPos.y = Math.max(1.4, camWorldPos.y + heightOffset);
     this.group.position.copy(screenPos);
 
     // Orientar de frente al usuario: en Three.js lookAt ya apunta la cara frontal (+Z) directamente a la cámara
@@ -233,25 +233,13 @@ export class VideoScreen {
   }
 
   /**
-   * Transición de entrada cinematográfica (visible y a escala completa inmediatamente,
-   * con micro-animación no bloqueante para evitar congelamientos en WebXR).
+   * Transición de entrada cinematográfica: visible y al tamaño definitivo desde el primer milisegundo,
+   * sin retrasos, escalamientos extraños o necesidad de gatillo.
    */
-  public animateIn(duration: number = 0.6): Promise<void> {
+  public animateIn(_duration: number = 0.6): Promise<void> {
     this.group.visible = true;
     this.group.scale.set(1, 1, 1);
     gsap.killTweensOf(this.group.scale);
-
-    // Efecto elástico sutil sin bloquear promesas
-    try {
-      gsap.from(this.group.scale, {
-        x: 0.9,
-        y: 0.9,
-        z: 0.9,
-        duration,
-        ease: 'power2.out',
-      });
-    } catch (e) {}
-
     return Promise.resolve();
   }
 
