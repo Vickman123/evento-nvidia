@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Panel de Operador // Stand UNAM PC PUMA Immersive</title>
+  <link rel="icon" type="image/png" href="assets/branding/pcpuma-logo.png" />
+  <style>
+    :root {
+      --bg-dark: #070e1a;
+      --card-bg: #0d1b2a;
+      --border-color: #1e293b;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --unam-blue: #002b7a;
+      --unam-gold: #d4af37;
+      --pcpuma-cyan: #00f0ff;
+      --accent-green: #10b981;
+      --accent-red: #ef4444;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      padding: 24px;
+      line-height: 1.5;
+    }
+
+    .dashboard-container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--border-color);
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .brand-title {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--text-main);
+      letter-spacing: -0.02em;
+    }
+
+    .brand-subtitle {
+      font-size: 13px;
+      color: var(--unam-gold);
+      font-weight: 600;
+      letter-spacing: 0.05em;
+    }
+
+    .grid-layout {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+      gap: 20px;
+      margin-bottom: 24px;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 20px;
+    }
+
+    .card-title {
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--pcpuma-cyan);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 6px 14px;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      color: #ffffff;
+      background-color: #334155;
+    }
+
+    .telemetry-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      font-size: 14px;
+    }
+
+    .telemetry-label {
+      color: var(--text-muted);
+    }
+
+    .telemetry-val {
+      font-weight: 700;
+      font-family: monospace;
+    }
+
+    .btn-group {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    button.action-btn {
+      width: 100%;
+      padding: 12px 18px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #002b7a 0%, #0284c7 100%);
+      color: #ffffff;
+      border-color: #38bdf8;
+    }
+    .btn-primary:hover {
+      background: linear-gradient(135deg, #003da5 0%, #0369a1 100%);
+      transform: translateY(-1px);
+    }
+
+    .btn-success {
+      background: #065f46;
+      color: #ffffff;
+      border-color: #10b981;
+    }
+    .btn-success:hover {
+      background: #047857;
+      transform: translateY(-1px);
+    }
+
+    .btn-warning {
+      background: #78350f;
+      color: #ffffff;
+      border-color: #f59e0b;
+    }
+    .btn-warning:hover {
+      background: #92400e;
+      transform: translateY(-1px);
+    }
+
+    .btn-danger {
+      background: #7f1d1d;
+      color: #ffffff;
+      border-color: #ef4444;
+    }
+    .btn-danger:hover {
+      background: #991b1b;
+      transform: translateY(-1px);
+    }
+
+    .form-group {
+      margin-bottom: 14px;
+    }
+
+    label {
+      display: block;
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+
+    input[type="number"], select {
+      width: 100%;
+      background: #070e1a;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 10px 12px;
+      color: var(--text-main);
+      font-size: 14px;
+      outline: none;
+    }
+    input[type="number"]:focus, select:focus {
+      border-color: var(--pcpuma-cyan);
+    }
+
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 8px;
+    }
+
+    .log-container {
+      background: #050b14;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 12px;
+      height: 160px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 12px;
+    }
+  </style>
+  <script type="module" crossorigin src="/evento-nvidia/assets/modulepreload-polyfill-BTn-X1SE.js"></script>
+  <script type="module" crossorigin src="/evento-nvidia/assets/SyncChannel-Bdp4hz1t.js"></script>
+  <script type="module" crossorigin src="/evento-nvidia/assets/operator-BLPVzOpL.js"></script>
+</head>
+<body>
+  <div class="dashboard-container">
+    <header>
+      <div>
+        <div class="brand-title">STAND OPERATOR CONSOLE</div>
+        <div class="brand-subtitle">UNAM IMMERSIVE EXPERIENCE — PC PUMA // POWERED BY VXR CORE</div>
+      </div>
+      <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+        <a href="./" style="text-decoration: none; padding: 9px 18px; border-radius: 9999px; background: rgba(56, 189, 248, 0.15); color: #38bdf8; font-size: 13px; font-weight: 700; border: 1px solid #38bdf8; display: inline-flex; align-items: center; gap: 8px; transition: all 0.2s ease;">
+          <span>←</span>
+          <span>Experiencia Principal 3D</span>
+        </a>
+      </div>
+    </header>
+
+    <div class="grid-layout">
+      <!-- Tarjeta 1: Telemetría y Estado -->
+      <div class="card">
+        <div class="card-title">📡 Estado del Visor en Stand</div>
+        <div style="margin-bottom: 16px; text-align: center;">
+          <div style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 4px;">Fase Actual de la Experiencia</div>
+          <span id="current-state-badge" class="badge" style="font-size: 16px; padding: 8px 20px;">IDLE</span>
+        </div>
+
+        <div class="telemetry-row">
+          <span class="telemetry-label">Dispositivo / Modo</span>
+          <span id="vr-status-badge" class="telemetry-val" style="color: #94A3B8;">Conectando...</span>
+        </div>
+        <div class="telemetry-row">
+          <span class="telemetry-label">Tasa de Cuadros (Target: 90Hz)</span>
+          <span id="fps-display" class="telemetry-val" style="color: var(--accent-green);">-- FPS</span>
+        </div>
+        <div class="telemetry-row">
+          <span class="telemetry-label">Carga GPU (Draw Calls / Malla)</span>
+          <span id="drawcalls-display" class="telemetry-val">--</span>
+        </div>
+      </div>
+
+      <!-- Tarjeta 2: Control del Operador -->
+      <div class="card">
+        <div class="card-title">🎮 Control Rápido de la Experiencia</div>
+        <div class="btn-group">
+          <button id="btn-cmd-start" class="action-btn btn-primary">
+            <span>▶ INICIAR EXPERIENCIA (FORZAR)</span>
+          </button>
+          <button id="btn-cmd-skip-exploration" class="action-btn btn-success">
+            <span>⏩ SALTAR EXPLORACIÓN ➔ MODO CINE</span>
+          </button>
+          <button id="btn-cmd-play-video" class="action-btn btn-warning">
+            <span>🎬 REPRODUCIR VIDEO INSTITUCIONAL</span>
+          </button>
+          <button id="btn-cmd-skip-outro" class="action-btn btn-primary" style="background:#4338ca;">
+            <span>🏁 SALTAR AL CIERRE PC PUMA</span>
+          </button>
+          <button id="btn-cmd-reset" class="action-btn btn-danger">
+            <span>↺ REINICIAR (LISTO PARA SIGUIENTE VISITANTE)</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Tarjeta 3: Configuración en Stand -->
+      <div class="card">
+        <div class="card-title">⚙ Configuración del Evento</div>
+        <div class="form-group">
+          <label>Duración Exploración 360° (segundos)</label>
+          <input type="number" id="cfg-exploration-duration" value="35" min="5" max="180" />
+        </div>
+        <div class="form-group">
+          <label>Tiempo de Reinicio Automático (segundos)</label>
+          <input type="number" id="cfg-reset-duration" value="10" min="3" max="60" />
+        </div>
+        <div class="form-group">
+          <label>Video Institucional Activo</label>
+          <select id="cfg-video-path">
+            <option value="assets/videos/video-institucional.mp4" selected>Video Institucional UNAM / PC PUMA (Local MP4)</option>
+          </select>
+        </div>
+        <div class="checkbox-row">
+          <input type="checkbox" id="cfg-ambient-audio" checked />
+          <label for="cfg-ambient-audio" style="margin: 0; cursor: pointer;">Audio ambiental habilitado</label>
+        </div>
+        <button id="btn-apply-config" class="action-btn btn-primary" style="margin-top: 14px;">
+          <span>💾 Guardar y Aplicar Cambios</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Registro de Eventos en Tiempo Real -->
+    <div class="card">
+      <div class="card-title">📋 Registro de Eventos del Stand</div>
+      <div id="event-logs" class="log-container"></div>
+    </div>
+  </div>
+
+</body>
+</html>
