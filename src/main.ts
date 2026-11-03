@@ -167,4 +167,67 @@ function styleButton(btn: HTMLButtonElement, active: boolean): void {
   }
 }
 
-window.addEventListener('DOMContentLoaded', bootstrap);
+/**
+ * Muestra un mensaje visual claro en caso de que ocurra un error fatal al inicializar Three.js / WebXR,
+ * evitando que el usuario quede frente a una pantalla azul vacía sin retroalimentación.
+ */
+function showFatalError(err: unknown): void {
+  const existing = document.getElementById('vxr-error-fallback');
+  if (existing) return;
+
+  const box = document.createElement('div');
+  box.id = 'vxr-error-fallback';
+  box.style.position = 'fixed';
+  box.style.inset = '0';
+  box.style.zIndex = '999999';
+  box.style.background = '#070e1a';
+  box.style.color = '#f8fafc';
+  box.style.display = 'flex';
+  box.style.flexDirection = 'column';
+  box.style.alignItems = 'center';
+  box.style.justifyContent = 'center';
+  box.style.padding = '24px';
+  box.style.textAlign = 'center';
+  box.style.fontFamily = 'system-ui, -apple-system, sans-serif';
+
+  const msg = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
+
+  box.innerHTML = `
+    <div style="max-width: 520px; background: rgba(15, 23, 42, 0.95); border: 1px solid rgba(239, 68, 68, 0.4); border-radius: 16px; padding: 32px; box-shadow: 0 20px 40px rgba(0,0,0,0.6);">
+      <div style="font-size: 36px; margin-bottom: 12px;">⚠️</div>
+      <h2 style="font-size: 20px; color: #f87171; margin-bottom: 8px;">No se pudo inicializar la experiencia 3D</h2>
+      <p style="font-size: 14px; color: #94a3b8; margin-bottom: 20px;">
+        Ocurrió un inconveniente al cargar el motor gráfico WebGL / WebXR.
+      </p>
+      <div style="background: #020617; border: 1px solid #1e293b; border-radius: 8px; padding: 12px; font-family: monospace; font-size: 12px; color: #fca5a5; text-align: left; max-height: 140px; overflow-y: auto; margin-bottom: 24px; word-break: break-all;">
+        ${msg}
+      </div>
+      <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+        <button onclick="window.location.reload()" style="background: #0284c7; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer;">
+          ↺ Reintentar
+        </button>
+        <a href="operador/" style="background: #1e293b; color: #38bdf8; text-decoration: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
+          <span>Panel de Operador →</span>
+        </a>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(box);
+}
+
+// Captura global de excepciones
+window.addEventListener('error', (e) => {
+  console.error('[VXR Window Error]', e.error || e.message);
+});
+window.addEventListener('unhandledrejection', (e) => {
+  console.error('[VXR Unhandled Rejection]', e.reason);
+});
+
+// Inicialización segura sin depender de que DOMContentLoaded no haya ocurrido todavía
+if (document.readyState === 'loading') {
+  window.addEventListener('DOMContentLoaded', () => {
+    bootstrap().catch(showFatalError);
+  });
+} else {
+  bootstrap().catch(showFatalError);
+}

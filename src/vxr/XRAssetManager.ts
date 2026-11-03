@@ -38,8 +38,9 @@ export class XRAssetManager {
     let shouldRevokeBlob = false;
 
     if (typeof source === 'string') {
-      url = source;
-      cacheKey = source;
+      const base = import.meta.env.BASE_URL || '/';
+      url = source.startsWith('assets/') ? `${base}${source}` : source;
+      cacheKey = url;
       if (this.loadedCache.has(cacheKey)) {
         return this.loadedCache.get(cacheKey)!;
       }

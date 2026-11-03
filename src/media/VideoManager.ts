@@ -85,9 +85,13 @@ export class VideoManager {
       this.createVideoElement();
     }
     const video = this.videoElement!;
-    if (url && video.src !== url && !video.src.endsWith(url)) {
-      video.src = url;
-      video.load();
+    if (url) {
+      const base = import.meta.env.BASE_URL || '/';
+      const resolvedUrl = url.startsWith('assets/') ? `${base}${url}` : url;
+      if (video.src !== resolvedUrl && !video.src.endsWith(url)) {
+        video.src = resolvedUrl;
+        video.load();
+      }
     }
   }
 
@@ -96,9 +100,11 @@ export class VideoManager {
       this.createVideoElement();
     }
     const video = this.videoElement!;
+    const base = import.meta.env.BASE_URL || '/';
+    const resolvedUrl = url.startsWith('assets/') ? `${base}${url}` : url;
 
-    if (video.src !== url && !video.src.endsWith(url)) {
-      video.src = url;
+    if (video.src !== resolvedUrl && !video.src.endsWith(url)) {
+      video.src = resolvedUrl;
       video.load();
     }
 
