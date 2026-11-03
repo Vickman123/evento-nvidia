@@ -33,9 +33,6 @@ if (existsSync(operadorHtml)) {
   mkdirSync(resolve(rootDir, 'operator'), { recursive: true });
   copyFileSync(operadorHtml, resolve(rootDir, 'operator/index.html'));
 
-  mkdirSync(resolve(rootDir, 'operador'), { recursive: true });
-  copyFileSync(operadorHtml, resolve(rootDir, 'operador/index.html'));
-
   console.log('[Postbuild] Rutas /operador y /operator sincronizadas exitosamente.');
 }
 
