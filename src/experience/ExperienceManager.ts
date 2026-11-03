@@ -147,6 +147,11 @@ export class ExperienceManager {
       vid.play().catch(() => {});
     }
 
+    // Recentrar la pantalla de video frente a la mirada si el usuario presiona el gatillo en VR
+    if (this.currentState === ExperienceState.VIDEO_PLAYBACK) {
+      this.videoScreen.placeInFrontOf(this.app.camera, 3.6, 0.2);
+    }
+
     if (this.currentState === ExperienceState.RESET_READY || this.currentState === ExperienceState.PC_PUMA_OUTRO) {
       const hits = this.app.raycastController(controllerIndex, [this.pcpumaOutro.restartButtonMesh], true);
       if (hits.length > 0) {
@@ -290,16 +295,19 @@ export class ExperienceManager {
 
   /**
    * Transición cinematográfica hacia la pantalla de video 16:9.
-   * La pantalla se visualiza y reproduce de inmediato frente al usuario.
+   * La pantalla se visualiza y reproduce de inmediato frente a la mirada del usuario.
    */
   public async transitionToCinema(): Promise<void> {
     this.clearExplorationTimer();
     this.setState(ExperienceState.TRANSITION_TO_CINEMA);
 
-    // Ocultar HUD de exploración si estaba visible
-    await this.experienceUI.hideHUD();
+    // Ocultar HUD de exploración
+    this.experienceUI.hideHUD();
 
-    // Asegurar que el elemento de video esté conectado a la pantalla virtual
+    // Posicionar la pantalla exactamente frente a la mirada del usuario (3.6m a nivel de ojos)
+    this.videoScreen.placeInFrontOf(this.app.camera, 3.6, 0.2);
+
+    // Asegurar que el elemento de video esté conectado a la pantalla virtual de inmediato
     const videoEl = this.videoManager.getVideoElement();
     if (videoEl) {
       this.videoScreen.attachVideo(videoEl);
@@ -313,8 +321,8 @@ export class ExperienceManager {
     // Iniciar carga/reproducción del video institucional
     const playPromise = this.videoManager.loadAndPlay(this.config.videoPath);
 
-    // Animación de entrada fluida de la pantalla virtual 16:9
-    await this.videoScreen.animateIn(1.0);
+    // Mostrar pantalla
+    this.videoScreen.animateIn(0.6);
 
     this.setState(ExperienceState.VIDEO_PLAYBACK);
 

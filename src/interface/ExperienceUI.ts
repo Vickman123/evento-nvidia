@@ -135,20 +135,10 @@ export class ExperienceUI {
 
   public hideHUD(): Promise<void> {
     this.isVisible = false;
-    return new Promise((resolve) => {
-      gsap.killTweensOf(this.group.scale);
-      gsap.to(this.group.scale, {
-        x: 0.001,
-        y: 0.001,
-        z: 0.001,
-        duration: 0.8,
-        ease: 'power2.in',
-        onComplete: () => {
-          this.group.visible = false;
-          resolve();
-        },
-      });
-    });
+    this.group.visible = false;
+    this.group.scale.set(0.001, 0.001, 0.001);
+    gsap.killTweensOf(this.group.scale);
+    return Promise.resolve();
   }
 
   public reset(): void {

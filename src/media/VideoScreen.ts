@@ -41,6 +41,7 @@ export class VideoScreen {
       side: THREE.DoubleSide,
       transparent: false,
       opacity: 1.0,
+      toneMapped: false, // Asegura máxima luminosidad y colores vivos sin oscurecimiento de tone mapping
     });
     this.screenMesh = new THREE.Mesh(screenGeo, this.screenMaterial);
     this.screenMesh.name = 'Screen_Display_Surface';
@@ -193,34 +194,56 @@ export class VideoScreen {
   }
 
   /**
-   * Transición de entrada cinematográfica (fade-in y escalado suave).
+   * Posiciona la pantalla exactamente frente a la mirada actual del usuario en VR o Desktop,
+   * orientándola perpendicularmente para una visualización 100% nítida, cómoda y cinematográfica.
    */
-  public animateIn(duration: number = 2.0): Promise<void> {
-    return new Promise((resolve) => {
-      this.group.visible = true;
-      gsap.killTweensOf(this.group.scale);
-      gsap.killTweensOf(this.group.position);
+  public placeInFrontOf(camera: THREE.Camera, distance: number = 3.6, heightOffset: number = 0.2): void {
+    this.group.visible = true;
+    this.group.scale.set(1, 1, 1);
 
-      const targetZ = 6 - this.config.videoScreenDistance;
-      this.group.position.z = targetZ;
-      this.group.scale.set(0.1, 0.1, 0.1);
-      this.group.position.y = this.config.videoScreenHeightAboveGround - 0.5;
+    const camWorldPos = new THREE.Vector3();
+    camera.getWorldPosition(camWorldPos);
 
-      gsap.to(this.group.scale, {
-        x: 1,
-        y: 1,
-        z: 1,
+    const camWorldDir = new THREE.Vector3();
+    camera.getWorldDirection(camWorldDir);
+    camWorldDir.y = 0; // Mantener en el plano horizontal para no inclinar la pantalla
+    if (camWorldDir.lengthSq() < 0.001) {
+      camWorldDir.set(0, 0, -1);
+    } else {
+      camWorldDir.normalize();
+    }
+
+    const screenPos = camWorldPos.clone().add(camWorldDir.clone().multiplyScalar(distance));
+    screenPos.y = Math.max(1.6, camWorldPos.y + heightOffset);
+    this.group.position.copy(screenPos);
+
+    // Orientar de frente al usuario
+    this.group.lookAt(camWorldPos.x, screenPos.y, camWorldPos.z);
+    this.group.rotateY(Math.PI); // La geometría frontal del plano apunta hacia la cámara
+    this.group.updateMatrixWorld(true);
+  }
+
+  /**
+   * Transición de entrada cinematográfica (visible y a escala completa inmediatamente,
+   * con micro-animación no bloqueante para evitar congelamientos en WebXR).
+   */
+  public animateIn(duration: number = 0.6): Promise<void> {
+    this.group.visible = true;
+    this.group.scale.set(1, 1, 1);
+    gsap.killTweensOf(this.group.scale);
+
+    // Efecto elástico sutil sin bloquear promesas
+    try {
+      gsap.from(this.group.scale, {
+        x: 0.9,
+        y: 0.9,
+        z: 0.9,
         duration,
-        ease: 'power3.out',
+        ease: 'power2.out',
       });
+    } catch (e) {}
 
-      gsap.to(this.group.position, {
-        y: this.config.videoScreenHeightAboveGround,
-        duration,
-        ease: 'power3.out',
-        onComplete: () => resolve(),
-      });
-    });
+    return Promise.resolve();
   }
 
   /**

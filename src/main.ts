@@ -1,3 +1,4 @@
+import gsap from 'gsap';
 import { XRApp } from './vxr/XRApp.js';
 import { ExperienceManager } from './experience/ExperienceManager.js';
 import { ExperienceState } from './experience/ExperienceStates.js';
@@ -54,6 +55,8 @@ async function bootstrap() {
     if (isVR) {
       observerControls.resetToCenter();
       app.lockVRToSpawn([0, 1.6, 6]);
+      // Alinear la pantalla virtual justo frente a la mirada del usuario en VR
+      experienceManager.videoScreen.placeInFrontOf(app.camera, 3.6, 0.2);
       // Si el usuario entra en WebXR desde Meta Quest Browser estando en IDLE,
       // arrancar automáticamente la experiencia y el video institucional
       if (experienceManager.currentState === ExperienceState.IDLE) {
@@ -68,6 +71,11 @@ async function bootstrap() {
   // 5. Bucle de actualización continuo
   let lastSyncTime = 0;
   app.onUpdate((delta) => {
+    // Sincronizar ticker de GSAP en cada fotograma del bucle WebXR
+    try {
+      gsap.ticker.tick();
+    } catch (e) {}
+
     if (!app.session.isPresenting) {
       observerControls.update(delta);
     } else {

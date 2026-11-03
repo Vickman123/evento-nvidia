@@ -172,24 +172,12 @@ export class PCpumaOutro {
    * Muestra la pantalla de cierre e inicia la cuenta regresiva de reinicio.
    */
   public show(autoResetSeconds: number = 10): Promise<void> {
-    return new Promise((resolve) => {
-      this.remainingSeconds = autoResetSeconds;
-      this.renderCanvas();
-      this.group.visible = true;
-
-      this.group.scale.set(0.1, 0.1, 0.1);
-      gsap.to(this.group.scale, {
-        x: 1,
-        y: 1,
-        z: 1,
-        duration: 1.5,
-        ease: 'power3.out',
-        onComplete: () => {
-          this.startCountdown();
-          resolve();
-        },
-      });
-    });
+    this.remainingSeconds = autoResetSeconds;
+    this.renderCanvas();
+    this.group.visible = true;
+    this.group.scale.set(1, 1, 1);
+    this.startCountdown();
+    return Promise.resolve();
   }
 
   private startCountdown(): void {
