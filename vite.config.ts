@@ -24,7 +24,6 @@ export default defineConfig(({ mode }) => {
       rollupOptions: {
         input: {
           main: resolve(__dirname, 'index.html'),
-          operator: resolve(__dirname, 'operator.html'),
           operador: resolve(__dirname, 'operador/index.html'),
           generator: resolve(__dirname, 'generator.html'),
         },
