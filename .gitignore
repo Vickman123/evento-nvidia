@@ -31,4 +31,5 @@ Thumbs.db
 *.njsproj
 *.sln
 *.sw?
-/Innovacion.mp4
+/Innovacion*.mp4
+/innovacion*.mp4
