@@ -218,14 +218,10 @@ export class XRApp {
   }
 
   /**
-   * Returns the active camera: in WebXR mode, returns the stereo ArrayCamera
-   * managed by Three.js WebXRManager containing actual headset gaze and position.
-   * In desktop mode, returns the primary PerspectiveCamera.
+   * Returns the primary camera connected to the scene graph and cameraRig,
+   * preserving full world transform synchronization in both Desktop and WebXR modes.
    */
   public get activeCamera(): THREE.Camera {
-    if (this.session.isPresenting) {
-      return this.renderer.xr.getCamera();
-    }
     return this.renderer.camera;
   }
 
@@ -237,10 +233,11 @@ export class XRApp {
     if (!this.session.isPresenting) return;
 
     // Headset translation compensation:
-    // In WebXR, the active headset camera is renderer.xr.getCamera()
+    // Sincroniza la cámara del visor para que los ojos queden exactamente en spawnPosition
     const xrCam = this.renderer.xr.getCamera();
     this.cameraRig.position.x = spawnPosition[0] - xrCam.position.x;
-    this.cameraRig.position.y = 0; // The floor is at 0; physical user height in headset handles eye level
+    const headY = xrCam.position.y > 0.4 ? xrCam.position.y : 1.6;
+    this.cameraRig.position.y = spawnPosition[1] - headY;
     this.cameraRig.position.z = spawnPosition[2] - xrCam.position.z;
     this.cameraRig.updateMatrixWorld(true);
   }

@@ -5,7 +5,8 @@ import type { ExperienceConfigData } from '../experience/ExperienceConfig.js';
 /**
  * Pantalla virtual cinematográfica 16:9 para la experiencia UNAM - PC PUMA.
  * Integra marco arquitectónico institucional (azul noche y ribete dorado),
- * textura de video por hardware (THREE.VideoTexture) a máximos FPS nativos sin pérdida
+ * textura de video por hardware (THREE.VideoTexture) a máximos FPS nativos sin pérdida,
+ * indicador HUD de pausa interactiva con gatillo
  * y un indicador HUD de progreso para reinicio mediante pulsación sostenida del botón [A].
  */
 export class VideoScreen {
@@ -17,6 +18,12 @@ export class VideoScreen {
   private standbyTexture: THREE.CanvasTexture;
   private videoElement: HTMLVideoElement | null = null;
   private config: ExperienceConfigData;
+
+  // Estado y Overlay de Pausa (Gatillo)
+  private isPaused: boolean = false;
+  private pauseOverlayGroup: THREE.Group;
+  private pauseOverlayMesh: THREE.Mesh;
+  private pauseTexture: THREE.CanvasTexture;
 
   // Indicador visual de reinicio (Hold botón [A] por 4 segundos)
   private restartHUDGroup: THREE.Group;
@@ -31,8 +38,13 @@ export class VideoScreen {
     this.group = new THREE.Group();
     this.group.name = 'VXR_Cinema_Screen';
 
-    // Posición inicial: 3.5m frente al usuario ubicado en el centro de la plaza (Z = 6)
-    this.group.position.set(0, config.videoScreenHeightAboveGround, 6 - config.videoScreenDistance);
+    // Posición inicial: exactamente a 3.5m frente al spawn de la plaza peatonal (Z = 6)
+    // El usuario está en X=0, Z=6 mirando hacia -Z.
+    // La pantalla se inicializa exactamente en X=0, Y=1.75, Z=2.5 mirando a Z=6.
+    const initialZ = 6 - config.videoScreenDistance;
+    const initialY = config.videoScreenHeightAboveGround;
+    this.group.position.set(0, initialY, initialZ);
+    this.group.lookAt(0, initialY, 6);
     this.group.scale.set(0.001, 0.001, 0.001); // Oculta inicialmente
     this.group.visible = false;
 
@@ -84,7 +96,60 @@ export class VideoScreen {
     bannerMesh.position.set(0, -height / 2 - 0.2, 0.05);
     this.group.add(bannerMesh);
 
-    // 4. Indicador HUD flotante para reinicio con botón [A] (sostenido 4 segundos)
+    // 4. Cartel / Overlay visual de PAUSA en el centro de la pantalla
+    this.pauseOverlayGroup = new THREE.Group();
+    this.pauseOverlayGroup.position.set(0, 0, 0.06);
+    this.pauseOverlayGroup.visible = false;
+
+    const pauseCanvas = document.createElement('canvas');
+    pauseCanvas.width = 1024;
+    pauseCanvas.height = 512;
+    const pctx = pauseCanvas.getContext('2d')!;
+
+    // Fondo oscuro redondeado
+    pctx.fillStyle = 'rgba(2, 13, 28, 0.88)';
+    pctx.beginPath();
+    pctx.roundRect(160, 40, 704, 432, 28);
+    pctx.fill();
+
+    // Borde perimetral dorado
+    pctx.strokeStyle = '#D4AF37';
+    pctx.lineWidth = 6;
+    pctx.beginPath();
+    pctx.roundRect(160, 40, 704, 432, 28);
+    pctx.stroke();
+
+    // Icono de pausa: dos barras verticales doradas
+    pctx.fillStyle = '#D4AF37';
+    pctx.fillRect(440, 110, 45, 130);
+    pctx.fillRect(539, 110, 45, 130);
+
+    // Título de PAUSA
+    pctx.fillStyle = '#FFFFFF';
+    pctx.font = 'bold 54px system-ui, -apple-system, sans-serif';
+    pctx.textAlign = 'center';
+    pctx.fillText('PAUSA', 512, 315);
+
+    // Subtítulo con indicación para reanudar
+    pctx.fillStyle = '#00F0FF';
+    pctx.font = 'bold 30px system-ui, -apple-system, sans-serif';
+    pctx.fillText('Presiona el gatillo para continuar ▶', 512, 395);
+
+    this.pauseTexture = new THREE.CanvasTexture(pauseCanvas);
+    this.pauseTexture.minFilter = THREE.LinearFilter;
+    this.pauseTexture.magFilter = THREE.LinearFilter;
+
+    const pauseGeo = new THREE.PlaneGeometry(width * 0.45, height * 0.45);
+    const pauseMat = new THREE.MeshBasicMaterial({
+      map: this.pauseTexture,
+      transparent: true,
+      side: THREE.DoubleSide,
+    });
+    this.pauseOverlayMesh = new THREE.Mesh(pauseGeo, pauseMat);
+    this.pauseOverlayGroup.add(this.pauseOverlayMesh);
+    this.group.add(this.pauseOverlayGroup);
+
+    // 5. Indicador HUD flotante para reinicio con botón [A] (sostenido 4 segundos)
     this.restartHUDGroup = new THREE.Group();
     this.restartHUDGroup.position.set(0, -height / 2 - 0.44, 0.08);
     this.restartHUDGroup.visible = false;
@@ -241,8 +306,7 @@ export class VideoScreen {
 
   /**
    * Actualización continua por fotograma ejecutada en el bucle WebGL/WebXR.
-   * Fuerza el refresco de la textura directamente desde el decodificador multimedia por hardware,
-   * garantizando fluidez constante sin caídas de FPS.
+   * Fuerza el refresco de la textura directamente desde el decodificador multimedia por hardware.
    */
   public update(): void {
     if (this.videoTexture && this.videoElement) {
@@ -250,6 +314,18 @@ export class VideoScreen {
         this.videoTexture.needsUpdate = true;
       }
     }
+  }
+
+  /**
+   * Activa o desactiva la visualización del overlay de Pausa.
+   */
+  public setPaused(paused: boolean): void {
+    this.isPaused = paused;
+    this.pauseOverlayGroup.visible = paused;
+  }
+
+  public getPaused(): boolean {
+    return this.isPaused;
   }
 
   /**
@@ -295,30 +371,43 @@ export class VideoScreen {
     this.screenMaterial.map = this.standbyTexture;
     this.screenMaterial.side = THREE.DoubleSide;
     this.screenMaterial.needsUpdate = true;
+    this.setPaused(false);
   }
 
   /**
    * Posiciona la pantalla exactamente frente a la mirada actual del usuario en VR o Desktop,
    * orientándola perpendicularmente para una visualización 100% nítida, cómoda y cinematográfica.
-   * Acepta un XRApp (para consultar app.activeCamera en WebXR) o un THREE.Camera.
+   * Evita cualquier caída o desplazamiento hacia las escaleras de la biblioteca.
    */
   public placeInFrontOf(
-    cameraOrApp: THREE.Camera | { activeCamera: THREE.Camera },
+    cameraOrApp: THREE.Camera | { activeCamera: THREE.Camera; camera?: THREE.Camera },
     distance: number = 3.5,
     heightOffset: number = 0.15
   ): void {
     this.group.visible = true;
     this.group.scale.set(1, 1, 1);
 
-    const camera = 'activeCamera' in cameraOrApp ? cameraOrApp.activeCamera : cameraOrApp;
+    // Preferir la cámara con jerarquía en el grafo de escena para incluir transforms del rig
+    const camera =
+      'camera' in cameraOrApp && cameraOrApp.camera
+        ? cameraOrApp.camera
+        : 'activeCamera' in cameraOrApp
+        ? cameraOrApp.activeCamera
+        : cameraOrApp;
 
     const camWorldPos = new THREE.Vector3();
-    camera.getWorldPosition(camWorldPos);
-
     const camWorldDir = new THREE.Vector3();
+
+    camera.getWorldPosition(camWorldPos);
     camera.getWorldDirection(camWorldDir);
     camWorldDir.y = 0; // Mantener en el plano horizontal para no inclinar la pantalla
-    if (camWorldDir.lengthSq() < 0.001) {
+
+    // Si la posición de la cámara aún no está inicializada o se encuentra en (0, 0, 0),
+    // anclar canónicamente en el centro de la plaza peatonal (0, 1.6, 6) mirando al norte (0, 0, -1)
+    if (camWorldPos.lengthSq() < 0.1 || camWorldPos.z < 2.0) {
+      camWorldPos.set(0, 1.6, 6);
+    }
+    if (camWorldDir.lengthSq() < 0.01) {
       camWorldDir.set(0, 0, -1);
     } else {
       camWorldDir.normalize();
@@ -369,8 +458,11 @@ export class VideoScreen {
     gsap.killTweensOf(this.group.position);
     this.group.scale.set(0.001, 0.001, 0.001);
     const targetZ = 6 - this.config.videoScreenDistance;
-    this.group.position.set(0, this.config.videoScreenHeightAboveGround, targetZ);
+    const targetY = this.config.videoScreenHeightAboveGround;
+    this.group.position.set(0, targetY, targetZ);
+    this.group.lookAt(0, targetY, 6);
     this.group.visible = false;
+    this.setPaused(false);
     this.setRestartHoldProgress(0, 0);
     this.detachVideo();
   }
@@ -382,6 +474,9 @@ export class VideoScreen {
       this.videoTexture.dispose();
       this.videoTexture = null;
     }
+    this.pauseTexture.dispose();
+    this.pauseOverlayMesh.geometry.dispose();
+    (this.pauseOverlayMesh.material as THREE.Material).dispose();
     this.restartHUDTexture.dispose();
     this.screenMaterial.dispose();
     this.screenMesh.geometry.dispose();

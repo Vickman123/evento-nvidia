@@ -103,10 +103,14 @@ export class ExperienceManager {
       }
     });
 
-    // Soporte para probar reinicio con tecla 'A' en simulación Desktop
+    // Soporte para probar reinicio con tecla 'A' y pausa con barra espaciadora en simulación Desktop
     window.addEventListener('keydown', (e) => {
       if (e.key === 'a' || e.key === 'A') {
         this.isKeyboardAPressed = true;
+      }
+      if (e.code === 'Space' && this.currentState === ExperienceState.VIDEO_PLAYBACK) {
+        e.preventDefault();
+        this.toggleVideoPause();
       }
     });
     window.addEventListener('keyup', (e) => {
@@ -167,19 +171,26 @@ export class ExperienceManager {
   }
 
   /**
-   * Maneja el impacto del rayo del mando Meta Quest en objetos 3D interactivos.
+   * Maneja el gatillo (trigger) del mando Meta Quest:
+   * En reproducción de video: alterna Pausa / Reanudar con vibración háptica.
+   * En pantallas finales: reinicia la experiencia al apuntar al botón 3D.
    */
   private handleControllerInteraction(controllerIndex: number): void {
-    // Si el navegador inició en modo silenciado por políticas de autoplay, cualquier gatillo/click en VR reactiva el audio
     this.videoManager.unmute();
-    const vid = this.videoManager.getVideoElement();
-    if (vid && vid.paused && this.currentState === ExperienceState.VIDEO_PLAYBACK) {
-      vid.play().catch(() => {});
-    }
 
-    // Recentrar la pantalla de video frente a la mirada si el usuario presiona el gatillo en VR
+    // 1. En reproducción de video: el gatillo actúa como botón de Pausa / Reanudar
     if (this.currentState === ExperienceState.VIDEO_PLAYBACK) {
-      this.videoScreen.placeInFrontOf(this.app, 3.5, 0.15);
+      this.toggleVideoPause();
+
+      // Pulso háptico de respuesta en el mando
+      const session = this.app.renderer.xr.getSession() as any;
+      if (session && session.inputSources && session.inputSources[controllerIndex]) {
+        const source = session.inputSources[controllerIndex];
+        if (source.gamepad?.hapticActuators?.length) {
+          source.gamepad.hapticActuators[0]?.pulse?.(0.5, 50);
+        }
+      }
+      return;
     }
 
     if (this.currentState === ExperienceState.RESET_READY || this.currentState === ExperienceState.PC_PUMA_OUTRO) {
@@ -192,16 +203,46 @@ export class ExperienceManager {
   }
 
   /**
-   * Maneja el clic con ratón sobre el botón 3D en simulación Desktop.
+   * Maneja el clic con ratón en simulación Desktop:
+   * En video: pausa o reanuda.
+   * En pantallas finales: pulsa botón 3D.
    */
   private handlePointerInteraction(event: PointerEvent): void {
     this.videoManager.unmute();
+
+    if (this.currentState === ExperienceState.VIDEO_PLAYBACK) {
+      this.toggleVideoPause();
+      return;
+    }
+
     if (this.currentState === ExperienceState.RESET_READY || this.currentState === ExperienceState.PC_PUMA_OUTRO) {
       const hits = this.app.raycastPointer(event, [this.pcpumaOutro.restartButtonMesh], true);
       if (hits.length > 0) {
         this.audioManager.playButtonSelectSound();
         this.resetExperience();
       }
+    }
+  }
+
+  /**
+   * Alterna la pausa y reanudación del video institucional,
+   * actualizando la superficie 3D con el letrero de PAUSA.
+   */
+  public toggleVideoPause(): void {
+    const video = this.videoManager.getVideoElement();
+    if (!video) return;
+
+    if (video.paused) {
+      video.play().then(() => {
+        this.videoScreen.setPaused(false);
+        this.audioManager.playButtonSelectSound();
+        console.info('[ExperienceManager] Video reanudado con gatillo.');
+      }).catch(() => {});
+    } else {
+      video.pause();
+      this.videoScreen.setPaused(true);
+      this.audioManager.playButtonSelectSound();
+      console.info('[ExperienceManager] Video pausado con gatillo.');
     }
   }
 
@@ -437,6 +478,7 @@ export class ExperienceManager {
     }
 
     // Si ya nos encontramos en VIDEO_PLAYBACK o TRANSITION_TO_CINEMA:
+    this.videoScreen.setPaused(false);
     this.videoManager.restart();
     this.videoScreen.placeInFrontOf(this.app, 3.5, 0.15);
     this.requestVRAlignment(180);
