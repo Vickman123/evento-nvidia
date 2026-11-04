@@ -1,6 +1,8 @@
 # UNAM IMMERSIVE EXPERIENCE – PC PUMA
 ## Experiencia Institucional WebXR para Meta Quest impulsada por VXR Core
 
+https://vickman123.github.io/evento-nvidia/
+
 > **Universidad Nacional Autónoma de México (UNAM)**  
 > **Programa PC PUMA — Dirección General de Cómputo y de Tecnologías de Información y Comunicación (DGTIC)**  
 > **Motor de Realidad Virtual:** VXR Core (Three.js + WebXR)
