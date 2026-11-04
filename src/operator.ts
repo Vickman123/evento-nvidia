@@ -1,5 +1,6 @@
 import { SyncChannel, type SyncMessage } from './utils/SyncChannel.js';
 import { ExperienceState } from './experience/ExperienceStates.js';
+import { offlineStorage, type CacheStatus } from './utils/OfflineStorageManager.js';
 
 class OperatorPanelController {
   private syncChannel: SyncChannel;
@@ -18,6 +19,13 @@ class OperatorPanelController {
   private ambientCheckbox: HTMLInputElement;
   private logBox: HTMLElement;
 
+  // Elementos Offline
+  private offlineVideoStatus: HTMLElement | null = null;
+  private offlineModelStatus: HTMLElement | null = null;
+  private offlineUsageStatus: HTMLElement | null = null;
+  private btnOfflineDownload: HTMLButtonElement | null = null;
+  private btnOfflineClear: HTMLButtonElement | null = null;
+
   constructor() {
     this.syncChannel = new SyncChannel();
 
@@ -32,9 +40,65 @@ class OperatorPanelController {
     this.ambientCheckbox = document.getElementById('cfg-ambient-audio') as HTMLInputElement;
     this.logBox = document.getElementById('event-logs')!;
 
+    this.offlineVideoStatus = document.getElementById('offline-video-status');
+    this.offlineModelStatus = document.getElementById('offline-model-status');
+    this.offlineUsageStatus = document.getElementById('offline-usage-status');
+    this.btnOfflineDownload = document.getElementById('btn-offline-download') as HTMLButtonElement | null;
+    this.btnOfflineClear = document.getElementById('btn-offline-clear') as HTMLButtonElement | null;
+
     this.bindButtons();
     this.bindSync();
+    this.bindOffline();
     this.addLog('Panel de operador iniciado. Esperando conexión con el visor...');
+  }
+
+  private bindOffline(): void {
+    if (this.btnOfflineDownload) {
+      this.btnOfflineDownload.addEventListener('click', async () => {
+        this.addLog('Iniciando descarga de video y escenario 3D para modo offline...');
+        this.btnOfflineDownload!.disabled = true;
+        this.btnOfflineDownload!.innerHTML = '<span>⏳ Descargando...</span>';
+        try {
+          await offlineStorage.downloadAllForOffline();
+          this.addLog('Descarga offline completada con éxito.');
+        } catch (e: any) {
+          this.addLog(`Error en descarga offline: ${e?.message || e}`);
+        } finally {
+          this.btnOfflineDownload!.disabled = false;
+          this.btnOfflineDownload!.innerHTML = '<span>📥 Descargar Todo a Memoria Local</span>';
+          this.updateOfflineUI();
+        }
+      });
+    }
+
+    if (this.btnOfflineClear) {
+      this.btnOfflineClear.addEventListener('click', async () => {
+        if (confirm('¿Seguro que deseas eliminar el video y el escenario 3D de la memoria local?')) {
+          await offlineStorage.clearCache();
+          this.addLog('Caché local de IndexedDB limpiado.');
+          this.updateOfflineUI();
+        }
+      });
+    }
+
+    offlineStorage.onStatus(() => this.updateOfflineUI());
+    this.updateOfflineUI();
+  }
+
+  private async updateOfflineUI(): Promise<void> {
+    const status = await offlineStorage.checkCacheStatus();
+    if (this.offlineVideoStatus) {
+      this.offlineVideoStatus.textContent = status.videoCached ? '✓ En memoria local' : 'Pendiente';
+      this.offlineVideoStatus.style.color = status.videoCached ? '#10B981' : '#F59E0B';
+    }
+    if (this.offlineModelStatus) {
+      this.offlineModelStatus.textContent = status.modelCached ? '✓ En memoria local' : 'Pendiente';
+      this.offlineModelStatus.style.color = status.modelCached ? '#10B981' : '#F59E0B';
+    }
+    if (this.offlineUsageStatus) {
+      const mb = (status.totalBytesCached / (1024 * 1024)).toFixed(1);
+      this.offlineUsageStatus.textContent = `${mb} MB en uso`;
+    }
   }
 
   private bindButtons(): void {

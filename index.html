@@ -91,6 +91,20 @@
       document.head.appendChild(s);
     }
   </script>
+
+  <!-- Service Worker para soporte Offline total en eventos con red inestable o sin WiFi -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        const isGh = window.location.pathname.includes('/evento-nvidia');
+        const swUrl = isGh ? '/evento-nvidia/sw.js' : './sw.js';
+        const swScope = isGh ? '/evento-nvidia/' : './';
+        navigator.serviceWorker.register(swUrl, { scope: swScope })
+          .then((reg) => console.info('[PWA] Service Worker registrado exitosamente en ámbito:', reg.scope))
+          .catch((err) => console.warn('[PWA] Advertencia al registrar Service Worker:', err));
+      });
+    }
+  </script>
 </head>
 <body>
   <div id="app"></div>

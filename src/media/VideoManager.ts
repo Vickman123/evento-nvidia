@@ -1,3 +1,5 @@
+import { offlineStorage, OFFLINE_ASSET_KEYS } from '../utils/OfflineStorageManager.js';
+
 /**
  * Gestor robusto de reproducción de video institucional para Meta Quest y Desktop.
  * Controla el ciclo de vida del elemento HTML5 Video, sincronización de audio,
@@ -108,9 +110,15 @@ export class VideoManager {
     }
     const video = this.videoElement!;
     if (url) {
-      const base = import.meta.env.BASE_URL || '/';
-      const cleanBase = base.endsWith('/') ? base : `${base}/`;
-      const resolvedUrl = url.startsWith('assets/') ? `${cleanBase}${url}` : url;
+      let resolvedUrl: string;
+      if (url.startsWith('blob:') || url.startsWith('data:') || url.startsWith('http://') || url.startsWith('https://')) {
+        resolvedUrl = url;
+      } else {
+        const base = import.meta.env.BASE_URL || '/';
+        const cleanBase = base.endsWith('/') ? base : `${base}/`;
+        resolvedUrl = url.startsWith('assets/') ? `${cleanBase}${url}` : url;
+      }
+
       if (video.src !== resolvedUrl && !video.src.endsWith(url)) {
         video.src = resolvedUrl;
         video.load();
@@ -137,11 +145,25 @@ export class VideoManager {
       this.createVideoElement();
     }
     const video = this.videoElement!;
-    const base = import.meta.env.BASE_URL || '/';
-    const cleanBase = base.endsWith('/') ? base : `${base}/`;
-    const resolvedUrl = url.startsWith('assets/') ? `${cleanBase}${url}` : url;
 
-    if (video.src !== resolvedUrl && !video.src.endsWith(url)) {
+    // Si el video está almacenado en caché local offline (IndexedDB), usar el blob local directamente
+    const localBlobUrl = await offlineStorage.getAssetBlobUrl(OFFLINE_ASSET_KEYS.VIDEO);
+    const targetUrl = localBlobUrl || url;
+
+    let resolvedUrl: string;
+    if (targetUrl.startsWith('blob:') || targetUrl.startsWith('data:') || targetUrl.startsWith('http://') || targetUrl.startsWith('https://')) {
+      resolvedUrl = targetUrl;
+    } else {
+      const base = import.meta.env.BASE_URL || '/';
+      const cleanBase = base.endsWith('/') ? base : `${base}/`;
+      resolvedUrl = targetUrl.startsWith('assets/') ? `${cleanBase}${targetUrl}` : targetUrl;
+    }
+
+    if (localBlobUrl) {
+      console.info('[VideoManager] Reproduciendo video institucional directamente desde memoria local (Offline Blob).');
+    }
+
+    if (video.src !== resolvedUrl && !video.src.endsWith(targetUrl)) {
       video.src = resolvedUrl;
       video.load();
     }

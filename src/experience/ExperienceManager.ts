@@ -11,6 +11,7 @@ import { PCpumaOutro } from '../transitions/PCpumaOutro.js';
 import { WelcomeScreen } from '../interface/WelcomeScreen.js';
 import { ExperienceUI } from '../interface/ExperienceUI.js';
 import { SyncChannel } from '../utils/SyncChannel.js';
+import { offlineStorage, OFFLINE_ASSET_KEYS } from '../utils/OfflineStorageManager.js';
 
 /**
  * Gestor y Máquina de Estados Centralizada de la UNAM Immersive Experience.
@@ -292,7 +293,10 @@ export class ExperienceManager {
     this.setState(ExperienceState.ENTER_XR);
 
     // 1. Activar reproducción síncronamente durante el clic del usuario (autoplay permission)
-    this.videoManager.prime(this.config.videoPath);
+    // Utiliza el video almacenado en memoria local si ya está en caché offline
+    const localVideoUrl = await offlineStorage.getAssetBlobUrl(OFFLINE_ASSET_KEYS.VIDEO);
+    const targetVideoUrl = localVideoUrl || this.config.videoPath;
+    this.videoManager.prime(targetVideoUrl);
     this.welcomeScreen.hide();
 
     // 2. Conectar de inmediato el elemento de video a la superficie 3D
@@ -390,8 +394,10 @@ export class ExperienceManager {
     this.unamScene.setCinemaMode(true);
     this.audioManager.duckAmbient(true);
 
-    // Iniciar carga/reproducción del video institucional
-    const playPromise = this.videoManager.loadAndPlay(this.config.videoPath);
+    // Iniciar carga/reproducción del video institucional (offline preferente desde memoria local)
+    const localVideoUrl = await offlineStorage.getAssetBlobUrl(OFFLINE_ASSET_KEYS.VIDEO);
+    const targetVideoUrl = localVideoUrl || this.config.videoPath;
+    const playPromise = this.videoManager.loadAndPlay(targetVideoUrl);
 
     // Mostrar pantalla
     this.videoScreen.animateIn(0.6);

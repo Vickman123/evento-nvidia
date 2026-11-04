@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
 import type { LoadedModel, LoadModelOptions, ModelMetrics } from './types.js';
+import { offlineStorage, OFFLINE_ASSET_KEYS } from '../utils/OfflineStorageManager.js';
 
 /**
  * XRAssetManager handles asynchronous loading of glTF/GLB models,
@@ -38,9 +39,25 @@ export class XRAssetManager {
     let shouldRevokeBlob = false;
 
     if (typeof source === 'string') {
-      const base = import.meta.env.BASE_URL || '/';
-      url = source.startsWith('assets/') ? `${base}${source}` : source;
-      cacheKey = url;
+      let resolvedBlobUrl: string | null = null;
+      if (source.includes('unam_biblioteca_diorama')) {
+        const localBlob = await offlineStorage.getAssetBlob(OFFLINE_ASSET_KEYS.DIORAMA_MODEL);
+        if (localBlob) {
+          resolvedBlobUrl = URL.createObjectURL(localBlob);
+          shouldRevokeBlob = true;
+          console.info('[XRAssetManager] Cargando Diorama 3D desde memoria local (IndexedDB offline).');
+        }
+      }
+
+      if (resolvedBlobUrl) {
+        url = resolvedBlobUrl;
+        cacheKey = source;
+      } else {
+        const base = import.meta.env.BASE_URL || '/';
+        url = source.startsWith('assets/') ? `${base}${source}` : source;
+        cacheKey = url;
+      }
+
       if (this.loadedCache.has(cacheKey)) {
         return this.loadedCache.get(cacheKey)!;
       }

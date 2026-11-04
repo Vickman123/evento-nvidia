@@ -25,6 +25,8 @@ if (existsSync(operadorHtml)) {
   // dist/operador.html y root/operador.html
   copyFileSync(operadorHtml, resolve(distDir, 'operador.html'));
   copyFileSync(operadorHtml, resolve(rootDir, 'operador.html'));
+  copyFileSync(operadorHtml, resolve(distDir, 'operator.html'));
+  copyFileSync(operadorHtml, resolve(rootDir, 'operator.html'));
   
   // dist/operator/index.html y root/operator/index.html
   mkdirSync(resolve(distDir, 'operator'), { recursive: true });
@@ -44,4 +46,12 @@ if (existsSync(distAssetsDir)) {
   mkdirSync(rootAssetsDir, { recursive: true });
   cpSync(distAssetsDir, rootAssetsDir, { recursive: true });
   console.log('[Postbuild] Bundles y assets sincronizados a assets/ en root para compatibilidad total con GitHub Pages.');
+}
+
+// 5. Sincronizar Service Worker para modo offline en root y dist
+const publicSw = resolve(rootDir, 'public/sw.js');
+if (existsSync(publicSw)) {
+  copyFileSync(publicSw, resolve(distDir, 'sw.js'));
+  copyFileSync(publicSw, resolve(rootDir, 'sw.js'));
+  console.log('[Postbuild] sw.js (Service Worker) sincronizado para modo Offline.');
 }

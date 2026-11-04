@@ -224,9 +224,10 @@
       font-size: 12px;
     }
   </style>
-  <script type="module" crossorigin src="/evento-nvidia/assets/modulepreload-polyfill.js"></script>
-  <script type="module" crossorigin src="/evento-nvidia/assets/SyncChannel.js"></script>
-  <script type="module" crossorigin src="/evento-nvidia/assets/operator2.js"></script>
+  <script type="module" crossorigin src="/evento-nvidia/assets/operador.js"></script>
+  <link rel="modulepreload" crossorigin href="/evento-nvidia/assets/modulepreload-polyfill.js">
+  <link rel="modulepreload" crossorigin href="/evento-nvidia/assets/SyncChannel.js">
+  <link rel="modulepreload" crossorigin href="/evento-nvidia/assets/operator2.js">
 </head>
 <body>
   <div class="dashboard-container">
@@ -313,6 +314,32 @@
           <span>💾 Guardar y Aplicar Cambios</span>
         </button>
       </div>
+
+      <!-- Tarjeta 4: Gestión de Almacenamiento Offline -->
+      <div class="card">
+        <div class="card-title">💾 Memoria Offline del Visor</div>
+        <div class="telemetry-row">
+          <span class="telemetry-label">Video Institucional (41 MB)</span>
+          <span id="offline-video-status" class="telemetry-val" style="color: var(--unam-gold);">Comprobando...</span>
+        </div>
+        <div class="telemetry-row">
+          <span class="telemetry-label">Escenario 3D (13 MB)</span>
+          <span id="offline-model-status" class="telemetry-val" style="color: var(--unam-gold);">Comprobando...</span>
+        </div>
+        <div class="telemetry-row">
+          <span class="telemetry-label">Espacio Usado en Disco</span>
+          <span id="offline-usage-status" class="telemetry-val">-- MB</span>
+        </div>
+
+        <div style="margin-top: 14px; display: flex; flex-direction: column; gap: 8px;">
+          <button id="btn-offline-download" class="action-btn btn-primary" style="font-size: 13px; padding: 10px;">
+            <span>📥 Descargar Todo a Memoria Local</span>
+          </button>
+          <button id="btn-offline-clear" class="action-btn btn-danger" style="font-size: 13px; padding: 10px; background: rgba(239, 68, 68, 0.2); border-color: #ef4444; color: #ef4444;">
+            <span>🗑️ Limpiar Caché Local</span>
+          </button>
+        </div>
+      </div>
     </div>
 
     <!-- Registro de Eventos en Tiempo Real -->
@@ -321,6 +348,20 @@
       <div id="event-logs" class="log-container"></div>
     </div>
   </div>
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        const isGh = window.location.pathname.includes('/evento-nvidia');
+        const swUrl = isGh ? '/evento-nvidia/sw.js' : '../sw.js';
+        const swScope = isGh ? '/evento-nvidia/' : '../';
+        navigator.serviceWorker.register(swUrl, { scope: swScope })
+          .catch(() => {});
+      });
+    }
+  </script>
+
+  <!-- En GitHub Pages carga el bundle precompilado operator2.js -->
 
 </body>
 </html>

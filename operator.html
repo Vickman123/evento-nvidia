@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Panel de Operador // Stand UNAM PC PUMA Immersive</title>
-  <link rel="icon" type="image/png" href="assets/branding/pcpuma-logo.png" />
+  <link rel="icon" type="image/png" href="/evento-nvidia/assets/pcpuma-logo.png" />
   <style>
     :root {
       --bg-dark: #070e1a;
@@ -224,6 +224,10 @@
       font-size: 12px;
     }
   </style>
+  <script type="module" crossorigin src="/evento-nvidia/assets/operador.js"></script>
+  <link rel="modulepreload" crossorigin href="/evento-nvidia/assets/modulepreload-polyfill.js">
+  <link rel="modulepreload" crossorigin href="/evento-nvidia/assets/SyncChannel.js">
+  <link rel="modulepreload" crossorigin href="/evento-nvidia/assets/operator2.js">
 </head>
 <body>
   <div class="dashboard-container">
@@ -233,7 +237,7 @@
         <div class="brand-subtitle">UNAM IMMERSIVE EXPERIENCE — PC PUMA // POWERED BY VXR CORE</div>
       </div>
       <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-        <a href="./" style="text-decoration: none; padding: 9px 18px; border-radius: 9999px; background: rgba(56, 189, 248, 0.15); color: #38bdf8; font-size: 13px; font-weight: 700; border: 1px solid #38bdf8; display: inline-flex; align-items: center; gap: 8px; transition: all 0.2s ease;">
+        <a href="../" style="text-decoration: none; padding: 9px 18px; border-radius: 9999px; background: rgba(56, 189, 248, 0.15); color: #38bdf8; font-size: 13px; font-weight: 700; border: 1px solid #38bdf8; display: inline-flex; align-items: center; gap: 8px; transition: all 0.2s ease;">
           <span>←</span>
           <span>Experiencia Principal 3D</span>
         </a>
@@ -310,6 +314,32 @@
           <span>💾 Guardar y Aplicar Cambios</span>
         </button>
       </div>
+
+      <!-- Tarjeta 4: Gestión de Almacenamiento Offline -->
+      <div class="card">
+        <div class="card-title">💾 Memoria Offline del Visor</div>
+        <div class="telemetry-row">
+          <span class="telemetry-label">Video Institucional (41 MB)</span>
+          <span id="offline-video-status" class="telemetry-val" style="color: var(--unam-gold);">Comprobando...</span>
+        </div>
+        <div class="telemetry-row">
+          <span class="telemetry-label">Escenario 3D (13 MB)</span>
+          <span id="offline-model-status" class="telemetry-val" style="color: var(--unam-gold);">Comprobando...</span>
+        </div>
+        <div class="telemetry-row">
+          <span class="telemetry-label">Espacio Usado en Disco</span>
+          <span id="offline-usage-status" class="telemetry-val">-- MB</span>
+        </div>
+
+        <div style="margin-top: 14px; display: flex; flex-direction: column; gap: 8px;">
+          <button id="btn-offline-download" class="action-btn btn-primary" style="font-size: 13px; padding: 10px;">
+            <span>📥 Descargar Todo a Memoria Local</span>
+          </button>
+          <button id="btn-offline-clear" class="action-btn btn-danger" style="font-size: 13px; padding: 10px; background: rgba(239, 68, 68, 0.2); border-color: #ef4444; color: #ef4444;">
+            <span>🗑️ Limpiar Caché Local</span>
+          </button>
+        </div>
+      </div>
     </div>
 
     <!-- Registro de Eventos en Tiempo Real -->
@@ -319,6 +349,19 @@
     </div>
   </div>
 
-  <script type="module" src="/src/operator.ts"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        const isGh = window.location.pathname.includes('/evento-nvidia');
+        const swUrl = isGh ? '/evento-nvidia/sw.js' : '../sw.js';
+        const swScope = isGh ? '/evento-nvidia/' : '../';
+        navigator.serviceWorker.register(swUrl, { scope: swScope })
+          .catch(() => {});
+      });
+    }
+  </script>
+
+  <!-- En GitHub Pages carga el bundle precompilado operator2.js -->
+
 </body>
 </html>
