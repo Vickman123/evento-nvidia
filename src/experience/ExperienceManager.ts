@@ -37,6 +37,12 @@ export class ExperienceManager {
   private explorationSecondsLeft: number = 0;
   private vrAlignmentFrames: number = 0;
 
+  // Control de reinicio por pulsación sostenida del botón [A] (4 segundos)
+  private aButtonHoldTime: number = 0;
+  private readonly HOLD_RESTART_DURATION: number = 4.0;
+  private isAButtonLocked: boolean = false;
+  private isKeyboardAPressed: boolean = false;
+
   constructor(app: XRApp, config: Partial<ExperienceConfigData> = {}) {
     this.app = app;
     this.config = { ...DEFAULT_CONFIG, ...config };
@@ -97,6 +103,18 @@ export class ExperienceManager {
       }
     });
 
+    // Soporte para probar reinicio con tecla 'A' en simulación Desktop
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'a' || e.key === 'A') {
+        this.isKeyboardAPressed = true;
+      }
+    });
+    window.addEventListener('keyup', (e) => {
+      if (e.key === 'a' || e.key === 'A') {
+        this.isKeyboardAPressed = false;
+      }
+    });
+
     // F. Loop de actualización continuo
     this.app.onUpdate((delta) => {
       this.unamScene.update(delta);
@@ -107,6 +125,7 @@ export class ExperienceManager {
         }
       }
       this.videoScreen.update();
+      this.checkControllerHoldToRestart(delta);
     });
   }
 
@@ -392,6 +411,112 @@ export class ExperienceManager {
     // 5. Regresar a pantalla de bienvenida IDLE
     this.welcomeScreen.show();
     this.setState(ExperienceState.IDLE);
+  }
+
+  /**
+   * Reinicia la reproducción del video institucional desde el segundo 0,
+   * reactiva audio y recentra la pantalla virtual frente a la mirada del usuario en VR.
+   */
+  public restartVideoPlayback(): void {
+    console.info('[ExperienceManager] Reiniciando video institucional...');
+    this.audioManager.playButtonSelectSound();
+
+    if (this.currentState === ExperienceState.IDLE) {
+      this.startExperience();
+      return;
+    }
+
+    if (this.currentState === ExperienceState.RESET_READY || this.currentState === ExperienceState.PC_PUMA_OUTRO) {
+      this.transitionToCinema();
+      return;
+    }
+
+    if (this.currentState === ExperienceState.EXPLORATION) {
+      this.transitionToCinema();
+      return;
+    }
+
+    // Si ya nos encontramos en VIDEO_PLAYBACK o TRANSITION_TO_CINEMA:
+    this.videoManager.restart();
+    this.videoScreen.placeInFrontOf(this.app, 3.5, 0.15);
+    this.requestVRAlignment(180);
+  }
+
+  /**
+   * Supervisa si el usuario mantiene presionado el botón [A] del mando de Meta Quest
+   * (o la tecla 'A' en Desktop) durante 4 segundos para reiniciar el video.
+   */
+  private checkControllerHoldToRestart(delta: number): void {
+    let isAPressed = this.isKeyboardAPressed;
+    let activeSource: any = null;
+
+    // 1. Polling de mandos WebXR (Meta Quest)
+    const session = this.app.renderer.xr.getSession() as any;
+    if (session && session.inputSources) {
+      for (let i = 0; i < session.inputSources.length; i++) {
+        const source = session.inputSources[i];
+        if (!source || !source.gamepad) continue;
+        const gp = source.gamepad;
+
+        // Botón 4: botón [A] en mando derecho (o [X] en mando izquierdo)
+        if (gp.buttons.length > 4 && gp.buttons[4].pressed) {
+          isAPressed = true;
+          activeSource = source;
+          break;
+        }
+      }
+    }
+
+    // 2. Si el botón no está presionado, restablecer temporizador
+    if (!isAPressed) {
+      if (this.aButtonHoldTime > 0) {
+        this.aButtonHoldTime = 0;
+        this.videoScreen.setRestartHoldProgress(0, this.HOLD_RESTART_DURATION);
+      }
+      this.isAButtonLocked = false;
+      return;
+    }
+
+    // 3. Si ya se ejecutó el reinicio durante esta misma pulsación, esperar a que se libere el botón
+    if (this.isAButtonLocked) {
+      return;
+    }
+
+    this.aButtonHoldTime += delta;
+    const progress = Math.min(1.0, this.aButtonHoldTime / this.HOLD_RESTART_DURATION);
+    const secondsRemaining = Math.max(0, this.HOLD_RESTART_DURATION - this.aButtonHoldTime);
+
+    // Actualizar HUD visual de cuenta regresiva y barra de progreso
+    this.videoScreen.setRestartHoldProgress(progress, secondsRemaining);
+
+    // Vibración háptica en el mando de Meta Quest durante el hold
+    if (activeSource?.gamepad?.hapticActuators && activeSource.gamepad.hapticActuators.length > 0) {
+      const actuator = activeSource.gamepad.hapticActuators[0];
+      if (actuator && typeof actuator.pulse === 'function') {
+        const pulseCycle = Math.floor(this.aButtonHoldTime * 2);
+        const lastCycle = Math.floor((this.aButtonHoldTime - delta) * 2);
+        if (pulseCycle > lastCycle) {
+          actuator.pulse(0.35, 45);
+        }
+      }
+    }
+
+    // 4. Al completar los 4 segundos:
+    if (this.aButtonHoldTime >= this.HOLD_RESTART_DURATION) {
+      this.isAButtonLocked = true;
+      this.aButtonHoldTime = 0;
+      this.videoScreen.setRestartHoldProgress(0, 0);
+
+      // Vibración de confirmación potente
+      if (activeSource?.gamepad?.hapticActuators && activeSource.gamepad.hapticActuators.length > 0) {
+        const actuator = activeSource.gamepad.hapticActuators[0];
+        if (actuator && typeof actuator.pulse === 'function') {
+          actuator.pulse(1.0, 300);
+        }
+      }
+
+      this.restartVideoPlayback();
+    }
   }
 
   public dispose(): void {

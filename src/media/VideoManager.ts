@@ -53,9 +53,9 @@ export class VideoManager {
       video.style.right = '0';
       video.style.width = '320px';
       video.style.height = '180px';
-      video.style.opacity = '0.01';
+      video.style.opacity = '0.05';
       video.style.pointerEvents = 'none';
-      video.style.zIndex = '0';
+      video.style.zIndex = '-1';
 
       if (!document.body.contains(video)) {
         document.body.appendChild(video);
@@ -188,6 +188,13 @@ export class VideoManager {
 
   public resume(): void {
     if (this.videoElement && this.videoElement.paused) {
+      this.videoElement.play().catch(() => {});
+    }
+  }
+
+  public restart(): void {
+    if (this.videoElement) {
+      this.videoElement.currentTime = 0;
       this.videoElement.play().catch(() => {});
     }
   }

@@ -4,46 +4,40 @@ import type { ExperienceConfigData } from '../experience/ExperienceConfig.js';
 
 /**
  * Pantalla virtual cinematográfica 16:9 para la experiencia UNAM - PC PUMA.
- * Dispone de marco arquitectónico biselado institucional (azul noche y dorado),
- * soporte para superficie curva o plana y animación cinematográfica de aparición.
+ * Integra marco arquitectónico institucional (azul noche y ribete dorado),
+ * textura de video por hardware (THREE.VideoTexture) a máximos FPS nativos sin pérdida
+ * y un indicador HUD de progreso para reinicio mediante pulsación sostenida del botón [A].
  */
 export class VideoScreen {
   public readonly group: THREE.Group;
   public readonly screenMesh: THREE.Mesh;
   public readonly frameMesh: THREE.Mesh;
   private screenMaterial: THREE.MeshBasicMaterial;
-  private videoCanvas: HTMLCanvasElement;
-  private videoCtx: CanvasRenderingContext2D;
-  private screenTexture: THREE.CanvasTexture;
+  private videoTexture: THREE.VideoTexture | null = null;
+  private standbyTexture: THREE.CanvasTexture;
   private videoElement: HTMLVideoElement | null = null;
-  private lastVideoTime: number = -1;
   private config: ExperienceConfigData;
+
+  // Indicador visual de reinicio (Hold botón [A] por 4 segundos)
+  private restartHUDGroup: THREE.Group;
+  private restartProgressBar: THREE.Mesh;
+  private restartHUDCanvas: HTMLCanvasElement;
+  private restartHUDCtx: CanvasRenderingContext2D;
+  private restartHUDTexture: THREE.CanvasTexture;
+  private restartHUDMesh: THREE.Mesh;
 
   constructor(config: ExperienceConfigData) {
     this.config = config;
     this.group = new THREE.Group();
     this.group.name = 'VXR_Cinema_Screen';
 
-    // Posición inicial: 4.2m frente al usuario ubicado en el centro de la plaza (Z = 6)
+    // Posición inicial: 3.5m frente al usuario ubicado en el centro de la plaza (Z = 6)
     this.group.position.set(0, config.videoScreenHeightAboveGround, 6 - config.videoScreenDistance);
     this.group.scale.set(0.001, 0.001, 0.001); // Oculta inicialmente
     this.group.visible = false;
 
-    // 1. Canvas 2D ultra-optimizado (640x360 coincidente con la resolución nativa del video).
-    // Evita transferencias masivas de texturas y reduce drásticamente el consumo térmico en Meta Quest.
-    this.videoCanvas = document.createElement('canvas');
-    this.videoCanvas.width = 640;
-    this.videoCanvas.height = 360;
-    this.videoCtx = this.videoCanvas.getContext('2d', { willReadFrequently: false })!;
-
-    // Dibujar pantalla de espera inicial en el canvas
-    this.renderStandbyOnCanvas();
-
-    this.screenTexture = new THREE.CanvasTexture(this.videoCanvas);
-    this.screenTexture.minFilter = THREE.LinearFilter;
-    this.screenTexture.magFilter = THREE.LinearFilter;
-    this.screenTexture.generateMipmaps = false;
-    this.screenTexture.colorSpace = THREE.SRGBColorSpace;
+    // 1. Textura inicial de espera / standby institucional
+    this.standbyTexture = this.createStandbyTexture();
 
     // 2. Malla de la pantalla (16:9 cinematográfica, nítida y sin recorte)
     const width = config.videoScreenWidth;
@@ -52,11 +46,11 @@ export class VideoScreen {
     const screenGeo = new THREE.PlaneGeometry(width, height);
 
     this.screenMaterial = new THREE.MeshBasicMaterial({
-      map: this.screenTexture,
+      map: this.standbyTexture,
       side: THREE.DoubleSide,
       transparent: false,
       opacity: 1.0,
-      toneMapped: false, // Asegura máxima luminosidad y colores vivos sin oscurecimiento de tone mapping
+      toneMapped: false, // Máxima luminosidad y colores puros
     });
     this.screenMesh = new THREE.Mesh(screenGeo, this.screenMaterial);
     this.screenMesh.name = 'Screen_Display_Surface';
@@ -89,49 +83,118 @@ export class VideoScreen {
     const bannerMesh = this.createFrameBanner(width);
     bannerMesh.position.set(0, -height / 2 - 0.2, 0.05);
     this.group.add(bannerMesh);
+
+    // 4. Indicador HUD flotante para reinicio con botón [A] (sostenido 4 segundos)
+    this.restartHUDGroup = new THREE.Group();
+    this.restartHUDGroup.position.set(0, -height / 2 - 0.44, 0.08);
+    this.restartHUDGroup.visible = false;
+
+    // Fondo del indicador HUD
+    const hudBgGeo = new THREE.PlaneGeometry(width * 0.75, 0.22);
+    const hudBgMat = new THREE.MeshBasicMaterial({
+      color: 0x020d1c,
+      transparent: true,
+      opacity: 0.94,
+      side: THREE.DoubleSide,
+    });
+    const hudBg = new THREE.Mesh(hudBgGeo, hudBgMat);
+    this.restartHUDGroup.add(hudBg);
+
+    // Borde exterior del HUD en dorado
+    const hudEdges = new THREE.LineSegments(
+      new THREE.EdgesGeometry(new THREE.BoxGeometry(width * 0.75, 0.22, 0.01)),
+      new THREE.LineBasicMaterial({ color: 0xd4af37 })
+    );
+    this.restartHUDGroup.add(hudEdges);
+
+    // Pista de la barra de progreso (fondo oscuro)
+    const trackWidth = width * 0.68;
+    const trackGeo = new THREE.PlaneGeometry(trackWidth, 0.035);
+    const trackMat = new THREE.MeshBasicMaterial({ color: 0x16283d, side: THREE.DoubleSide });
+    const trackMesh = new THREE.Mesh(trackGeo, trackMat);
+    trackMesh.position.set(0, -0.045, 0.004);
+    this.restartHUDGroup.add(trackMesh);
+
+    // Barra de progreso dorada (origen en el borde izquierdo para escalar con scale.x)
+    const barGeo = new THREE.PlaneGeometry(trackWidth, 0.035);
+    barGeo.translate(trackWidth / 2, 0, 0);
+    const barMat = new THREE.MeshBasicMaterial({ color: 0xd4af37, side: THREE.DoubleSide });
+    this.restartProgressBar = new THREE.Mesh(barGeo, barMat);
+    this.restartProgressBar.position.set(-trackWidth / 2, -0.045, 0.008);
+    this.restartProgressBar.scale.x = 0.0001;
+    this.restartHUDGroup.add(this.restartProgressBar);
+
+    // Rótulo de texto del indicador
+    this.restartHUDCanvas = document.createElement('canvas');
+    this.restartHUDCanvas.width = 1024;
+    this.restartHUDCanvas.height = 128;
+    this.restartHUDCtx = this.restartHUDCanvas.getContext('2d')!;
+
+    this.restartHUDTexture = new THREE.CanvasTexture(this.restartHUDCanvas);
+    this.restartHUDTexture.minFilter = THREE.LinearFilter;
+    this.restartHUDTexture.magFilter = THREE.LinearFilter;
+    const textGeo = new THREE.PlaneGeometry(trackWidth, 0.11);
+    const textMat = new THREE.MeshBasicMaterial({
+      map: this.restartHUDTexture,
+      transparent: true,
+      side: THREE.DoubleSide,
+    });
+    this.restartHUDMesh = new THREE.Mesh(textGeo, textMat);
+    this.restartHUDMesh.position.set(0, 0.04, 0.008);
+    this.restartHUDGroup.add(this.restartHUDMesh);
+
+    this.group.add(this.restartHUDGroup);
   }
 
-  private renderStandbyOnCanvas(): void {
-    const ctx = this.videoCtx;
-    const w = this.videoCanvas.width;
-    const h = this.videoCanvas.height;
+  private createStandbyTexture(): THREE.CanvasTexture {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1280;
+    canvas.height = 720;
+    const ctx = canvas.getContext('2d')!;
 
     // Fondo azul degradado tecnológico
-    const grad = ctx.createRadialGradient(w / 2, h / 2, 80, w / 2, h / 2, w / 2);
+    const grad = ctx.createRadialGradient(640, 360, 80, 640, 360, 640);
     grad.addColorStop(0, '#0a2540');
     grad.addColorStop(1, '#001122');
     ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, w, h);
+    ctx.fillRect(0, 0, 1280, 720);
 
     // Patrón sutil de cuadrícula tecnológica
     ctx.strokeStyle = 'rgba(0, 240, 255, 0.08)';
     ctx.lineWidth = 1;
-    for (let x = 0; x < w; x += 60) {
+    for (let x = 0; x < 1280; x += 60) {
       ctx.beginPath();
       ctx.moveTo(x, 0);
-      ctx.lineTo(x, h);
+      ctx.lineTo(x, 720);
       ctx.stroke();
     }
-    for (let y = 0; y < h; y += 60) {
+    for (let y = 0; y < 720; y += 60) {
       ctx.beginPath();
       ctx.moveTo(0, y);
-      ctx.lineTo(w, y);
+      ctx.lineTo(1280, y);
       ctx.stroke();
     }
 
     // Escudo / Rótulo Central
     ctx.fillStyle = '#D4AF37';
-    ctx.font = 'bold 18px system-ui, -apple-system, sans-serif';
+    ctx.font = 'bold 36px system-ui, -apple-system, sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('UNIVERSIDAD NACIONAL AUTÓNOMA DE MÉXICO', w / 2, h / 2 - 40);
+    ctx.fillText('UNIVERSIDAD NACIONAL AUTÓNOMA DE MÉXICO', 640, 300);
 
     ctx.fillStyle = '#FFFFFF';
-    ctx.font = 'bold 38px system-ui, -apple-system, sans-serif';
-    ctx.fillText('PC PUMA', w / 2, h / 2 + 10);
+    ctx.font = 'bold 64px system-ui, -apple-system, sans-serif';
+    ctx.fillText('PC PUMA', 640, 390);
 
     ctx.fillStyle = '#00F0FF';
-    ctx.font = '16px system-ui, -apple-system, sans-serif';
-    ctx.fillText('Tecnología para transformar el aprendizaje', w / 2, h / 2 + 55);
+    ctx.font = '28px system-ui, -apple-system, sans-serif';
+    ctx.fillText('Tecnología para transformar el aprendizaje', 640, 460);
+
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.minFilter = THREE.LinearFilter;
+    tex.magFilter = THREE.LinearFilter;
+    tex.generateMipmaps = false;
+    tex.colorSpace = THREE.SRGBColorSpace;
+    return tex;
   }
 
   private createFrameBanner(width: number): THREE.Mesh {
@@ -155,49 +218,83 @@ export class VideoScreen {
   }
 
   /**
-   * Conecta un elemento de video HTML5 a la superficie 3D mediante el canvas de decodificación directa.
+   * Conecta un elemento de video HTML5 directamente a la superficie 3D mediante THREE.VideoTexture.
+   * Utiliza la ruta de hardware zero-copy de WebGL en Meta Quest para reproducción fluida a 30/60 FPS.
    */
   public attachVideo(video: HTMLVideoElement): void {
     this.videoElement = video;
-    this.lastVideoTime = -1;
+    if (this.videoTexture) {
+      this.videoTexture.dispose();
+      this.videoTexture = null;
+    }
+
+    this.videoTexture = new THREE.VideoTexture(video);
+    this.videoTexture.minFilter = THREE.LinearFilter;
+    this.videoTexture.magFilter = THREE.LinearFilter;
+    this.videoTexture.generateMipmaps = false;
+    this.videoTexture.colorSpace = THREE.SRGBColorSpace;
+
+    this.screenMaterial.map = this.videoTexture;
+    this.screenMaterial.side = THREE.DoubleSide;
+    this.screenMaterial.needsUpdate = true;
   }
 
   /**
-   * Actualización continua ejecutada en el bucle WebGL/WebXR.
-   * Sólo redibuja si el tiempo de reproducción avanzó (30 FPS en lugar de 90 FPS),
-   * reduciendo en un 66% el uso del bus de memoria y manteniendo las gafas frías.
+   * Actualización continua por fotograma ejecutada en el bucle WebGL/WebXR.
+   * Fuerza el refresco de la textura directamente desde el decodificador multimedia por hardware,
+   * garantizando fluidez constante sin caídas de FPS.
    */
   public update(): void {
-    if (this.videoElement && this.videoCtx) {
+    if (this.videoTexture && this.videoElement) {
       if (this.videoElement.readyState >= 2 && !this.videoElement.paused) {
-        const currentTime = this.videoElement.currentTime;
-        if (currentTime !== this.lastVideoTime) {
-          this.lastVideoTime = currentTime;
-          try {
-            this.videoCtx.drawImage(
-              this.videoElement,
-              0,
-              0,
-              this.videoCanvas.width,
-              this.videoCanvas.height
-            );
-            this.screenTexture.needsUpdate = true;
-          } catch (e) {
-            // Captura silenciosa de errores transitorios
-          }
-        }
+        this.videoTexture.needsUpdate = true;
       }
     }
   }
 
   /**
-   * Libera la referencia al video y restablece la imagen de standby.
+   * Actualiza el indicador visual de progreso de reinicio cuando el usuario mantiene presionado el botón [A].
+   * @param progress Valor normalizado de 0.0 a 1.0
+   * @param secondsRemaining Segundos restantes para completar los 4 segundos
+   */
+  public setRestartHoldProgress(progress: number, secondsRemaining: number): void {
+    if (progress <= 0.001) {
+      this.restartHUDGroup.visible = false;
+      this.restartProgressBar.scale.x = 0.0001;
+      return;
+    }
+
+    this.restartHUDGroup.visible = true;
+    this.restartProgressBar.scale.x = Math.max(0.0001, Math.min(1.0, progress));
+
+    const ctx = this.restartHUDCtx;
+    ctx.clearRect(0, 0, 1024, 128);
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    ctx.fillStyle = '#00F0FF';
+    ctx.font = 'bold 36px system-ui, -apple-system, sans-serif';
+    ctx.fillText(
+      `Reiniciando video en ${secondsRemaining.toFixed(1)}s... (Mantén [A] presionado)`,
+      512,
+      64
+    );
+
+    this.restartHUDTexture.needsUpdate = true;
+  }
+
+  /**
+   * Libera la textura de video y restablece la imagen institucional de standby.
    */
   public detachVideo(): void {
     this.videoElement = null;
-    this.lastVideoTime = -1;
-    this.renderStandbyOnCanvas();
-    this.screenTexture.needsUpdate = true;
+    if (this.videoTexture) {
+      this.videoTexture.dispose();
+      this.videoTexture = null;
+    }
+    this.screenMaterial.map = this.standbyTexture;
+    this.screenMaterial.side = THREE.DoubleSide;
+    this.screenMaterial.needsUpdate = true;
   }
 
   /**
@@ -205,7 +302,11 @@ export class VideoScreen {
    * orientándola perpendicularmente para una visualización 100% nítida, cómoda y cinematográfica.
    * Acepta un XRApp (para consultar app.activeCamera en WebXR) o un THREE.Camera.
    */
-  public placeInFrontOf(cameraOrApp: THREE.Camera | { activeCamera: THREE.Camera }, distance: number = 3.5, heightOffset: number = 0.15): void {
+  public placeInFrontOf(
+    cameraOrApp: THREE.Camera | { activeCamera: THREE.Camera },
+    distance: number = 3.5,
+    heightOffset: number = 0.15
+  ): void {
     this.group.visible = true;
     this.group.scale.set(1, 1, 1);
 
@@ -270,12 +371,18 @@ export class VideoScreen {
     const targetZ = 6 - this.config.videoScreenDistance;
     this.group.position.set(0, this.config.videoScreenHeightAboveGround, targetZ);
     this.group.visible = false;
+    this.setRestartHoldProgress(0, 0);
     this.detachVideo();
   }
 
   public dispose(): void {
     this.reset();
-    this.screenTexture.dispose();
+    this.standbyTexture.dispose();
+    if (this.videoTexture) {
+      this.videoTexture.dispose();
+      this.videoTexture = null;
+    }
+    this.restartHUDTexture.dispose();
     this.screenMaterial.dispose();
     this.screenMesh.geometry.dispose();
     this.frameMesh.geometry.dispose();
